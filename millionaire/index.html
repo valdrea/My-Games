@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Millionaire Trivia</title>
+
+  <!-- Soft, rounded font -->
+  <link
+    href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600&display=swap"
+    rel="stylesheet"
+  />
+
+  <!-- Trivia API decoder -->
+  <script src="https://cdn.jsdelivr.net/npm/he/he.js"></script>
+
+  <style>
+    /* Global body tweaks */
+    body {
+      margin: 0;
+      font-family: 'Quicksand', Arial, sans-serif;
+      font-size: 1.1rem;
+      background: radial-gradient(circle at center, #000 0%, #111 100%);
+      color: #eee;
+      overflow: hidden;
+    }
+
+    /* Grid background */
+    .grid-bg {
+      background-image:
+        repeating-linear-gradient(0deg, #222 0, #222 1px, transparent 1px, transparent 20px),
+        repeating-linear-gradient(90deg, #222 0, #222 1px, transparent 1px, transparent 20px);
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -1;
+    }
+
+    /* Perspective for 3D effect */
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 20px;
+      position: relative;
+      perspective: 800px;
+    }
+
+    /* Neon‐glow title */
+    h1 {
+      text-align: center;
+      color: #0ff;
+      font-size: 2.8em;
+      margin-bottom: 20px;
+      text-shadow:
+        0 0 8px #0ff,
+        0 0 16px #0ff,
+        2px 2px #005555;
+    }
+
+    /* Game layout */
+    .game-area {
+      display: flex;
+      gap: 20px;
+      align-items: stretch;
+    }
+
+    /* Shared panel style */
+    .question-box,
+    .prize-ladder {
+      border-radius: 15px;
+      background: #222;
+      border: 2px solid #0ff;
+      box-shadow:
+        0 8px 20px rgba(0, 255, 255, 0.2),
+        inset 0 0 10px rgba(0, 255, 255, 0.1);
+      transform: translateY(-2px);
+      transition: transform 0.3s;
+    }
+    .question-box:hover,
+    .prize-ladder:hover {
+      transform: translateY(-4px);
+    }
+
+    /* Question box */
+    .question-box {
+      flex: 2;
+      padding: 30px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Timer */
+    #timer {
+      font-size: 2.2em;
+      color: #0ff;
+      text-align: center;
+      margin-bottom: 20px;
+      text-shadow: 0 0 6px #0ff;
+    }
+
+    /* Question text */
+    #question {
+      font-size: 1.8em;
+      text-align: center;
+      margin-bottom: 25px;
+    }
+
+    /* Answers grid */
+    .answers {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-bottom: 30px;
+      flex-grow: 1;
+    }
+
+    /* Answer buttons */
+    .answers button {
+      border-radius: 12px;
+      border: 2px solid #0ff;
+      background: #333;
+      color: #eee;
+      padding: 20px;
+      font-size: 1.2em;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(255, 0, 255, 0.3);
+      transition: transform 0.2s, box-shadow 0.2s, background 0.2s;
+    }
+    .answers button:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 24px rgba(255, 0, 255, 0.4);
+      background: #444;
+    }
+
+    /* Correct / incorrect */
+    .answers button.correct {
+      border-color: #ffd700;
+      box-shadow: 0 0 16px #ffd700;
+      background: orange;
+      color: black;
+    }
+    .answers button.incorrect {
+      border-color: #f00;
+      box-shadow: 0 0 16px #f00;
+      background: red;
+      color: white;
+    }
+
+    /* Feedback text */
+    #feedback {
+      text-align: center;
+      font-size: 2em;
+      margin-top: 10px;
+      display: none;
+    }
+
+    /* Lifelines row */
+    .lifelines {
+      display: flex;
+      justify-content: space-around;
+      margin-top: auto;
+    }
+    .lifelines button {
+      border-radius: 12px;
+      border: 2px solid #0ff;
+      background: #333;
+      color: #eee;
+      padding: 15px 25px;
+      font-size: 1em;
+      font-weight: bold;
+      box-shadow: 0 4px 12px rgba(255, 0, 255, 0.3);
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s, background 0.2s;
+    }
+    .lifelines button:hover:not(:disabled) {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 24px rgba(255, 0, 255, 0.4);
+      background: #444;
+    }
+    .lifelines button:disabled {
+      background: #555;
+      color: #999;
+      border-color: #555;
+      filter: grayscale(100%);
+      opacity: 0.6;
+      box-shadow: none;
+      cursor: not-allowed;
+    }
+
+    /* Prize ladder */
+    .prize-ladder {
+      flex: 1;
+      padding: 20px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+    }
+    .prize {
+      padding: 8px 0;
+      margin: 4px 0;
+      font-size: 1em;
+      display: flex;
+      justify-content: space-between;
+    }
+    .active-prize {
+      background: limegreen;
+      font-weight: bold;
+      color: black;
+      border-radius: 5px;
+    }
+
+    /* Dialogs (modals) */
+    dialog {
+      opacity: 0;
+      transition: opacity 0.4s ease, transform 0.4s ease;
+      transform: translateY(-10px);
+      background: #222;
+      color: white;
+      border: 2px solid #0ff;
+      border-radius: 15px;
+      padding: 20px;
+      box-shadow:
+        0 8px 20px rgba(0, 255, 255, 0.2),
+        inset 0 0 10px rgba(0, 255, 255, 0.1);
+    }
+    dialog.showing {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    dialog button,
+    dialog input {
+      margin-top: 10px;
+      padding: 8px 16px;
+      border-radius: 12px;
+      border: 2px solid #0ff;
+      background: #333;
+      color: #eee;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(255, 0, 255, 0.3);
+      transition: transform 0.2s, box-shadow 0.2s, background 0.2s;
+    }
+    dialog button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(255, 0, 255, 0.4);
+      background: #444;
+    }
+    dialog input {
+      width: 60%;
+      text-align: center;
+      font-size: 1em;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="grid-bg"></div>
+  <div class="container">
+    <h1>Who Wants to Be a Millionaire</h1>
+
+    <div class="game-area">
+      <div class="question-box">
+        <div id="timer">Time: --s</div>
+        <div id="question">Loading question...</div>
+        <div class="answers" id="answers"></div>
+        <div id="feedback"></div>
+        <div class="lifelines">
+          <button onclick="useFiftyFifty()" id="fifty">50/50</button>
+          <button onclick="usePhoneAFriend()" id="phone">Phone a Friend</button>
+          <button onclick="useNewQuestion()" id="newQ">New Question</button>
+        </div>
+      </div>
+
+      <div class="prize-ladder" id="ladder"></div>
+    </div>
+  </div>
+
+  <!-- Phone a Friend -->
+  <dialog id="friendModal">
+    <p id="friendHelp">Your friend thinks the answer is…</p>
+    <button onclick="closeDialog('friendModal')">Close</button>
+  </dialog>
+
+  <!-- Category Selection -->
+  <dialog id="categoryModal">
+    <p>Select a category:</p>
+    <div id="categoryButtons"></div>
+    <div id="categoryTimer">Auto-select in 5s</div>
+  </dialog>
+
+  <!-- Win Modal -->
+  <dialog id="winModal">
+    <p>Congratulations! You've won $1,000,000!</p>
+    <input type="text" id="initials" placeholder="Enter initials" maxlength="3" />
+    <button onclick="saveWinner()">Save</button>
+  </dialog>
+
+  <!-- Hall of Fame -->
+  <dialog id="hallOfFame">
+    <p>Hall of Fame</p>
+    <ul id="winnersList"></ul>
+    <button onclick="closeDialog('hallOfFame')">Close</button>
+  </dialog>
+
+  <!-- End-of-Game Modal -->
+  <dialog id="endModal">
+    <p id="endMessage"></p>
+    <button onclick="restartGame()">Play Again</button>
+    <button onclick="closeDialog('endModal')">Quit</button>
+  </dialog>
+
+  <script>
+    // state
+    const prizeLevels = [
+      "$100","$200","$300","$500","$1,000",
+      "$2,000","$4,000","$8,000","$16,000","$32,000",
+      "$64,000","$125,000","$250,000","$500,000","$1,000,000"
+    ];
+    const categories = [
+      { id:9,  name:"General Knowledge" },
+      { id:17, name:"Science & Nature" },
+      { id:21, name:"Sports" },
+      { id:22, name:"Geography" },
+      { id:23, name:"History" },
+      { id:11, name:"Entertainment: Film" }
+    ];
+    let currentQuestion={}, questionIndex=0, timerId, timeLeft;
+
+    function showDialog(id){
+      const dlg=document.getElementById(id);
+      dlg.classList.add('showing');
+      dlg.showModal();
+    }
+    function closeDialog(id){
+      const dlg=document.getElementById(id);
+      dlg.classList.remove('showing');
+      setTimeout(()=> dlg.close(),400);
+    }
+
+    function shuffle(arr){
+      for(let i=arr.length-1;i>0;i--){
+        const j=Math.floor(Math.random()*(i+1));
+        [arr[i],arr[j]]=[arr[j],arr[i]];
+      }
+    }
+    function decode(s){ return he.decode(s); }
+
+    // Category picker
+    function showCategoryModal(){
+      return new Promise(res=>{
+        const dlg=document.getElementById('categoryModal');
+        const btns=document.getElementById('categoryButtons');
+        btns.innerHTML='';
+        let count=5;
+        document.getElementById('categoryTimer').textContent=`Auto-select in ${count}s`;
+
+        let copy=categories.slice(); shuffle(copy);
+        let pair=copy.slice(0,2);
+        const cd=setInterval(()=>{
+          count--;
+          document.getElementById('categoryTimer').textContent=`Auto-select in ${count}s`;
+          if(count===0){
+            clearInterval(cd);
+            closeDialog('categoryModal');
+            res(pair[Math.floor(Math.random()*2)].id);
+          }
+        },1000);
+
+        pair.forEach(c=>{
+          const b=document.createElement('button');
+          b.textContent=c.name;
+          b.onclick=()=>{
+            clearInterval(cd);
+            closeDialog('categoryModal');
+            res(c.id);
+          };
+          btns.appendChild(b);
+        });
+
+        showDialog('categoryModal');
+      });
+    }
+
+    // Load next question
+    async function loadQuestion(){
+      clearInterval(timerId);
+      if(questionIndex < prizeLevels.length-1){
+        const catId=await showCategoryModal();
+        window.catParam=`&category=${catId}`;
+      } else {
+        window.catParam='';
+      }
+      let diff = questionIndex<5 ? 'easy'
+               : questionIndex<10 ? 'medium'
+               : 'hard';
+      fetch(`https://opentdb.com/api.php?amount=1&type=multiple&difficulty=${diff}${window.catParam}`)
+        .then(r=>r.json()).then(d=>{
+          currentQuestion=d.results[0];
+          displayQuestion();
+        });
+    }
+
+    function displayQuestion(){
+      clearInterval(timerId);
+      document.getElementById('answers').innerHTML='';
+      hideFeedback();
+
+      timeLeft = questionIndex<5 ? 60
+               : questionIndex<10 ? 120
+               : 180;
+      document.getElementById('timer').textContent=`Time: ${timeLeft}s`;
+      timerId = setInterval(()=>{
+        timeLeft--;
+        document.getElementById('timer').textContent=`Time: ${timeLeft}s`;
+        if(timeLeft<=0){ clearInterval(timerId); endGame("Time's up!"); }
+      },1000);
+
+      document.getElementById('question').innerHTML = decode(currentQuestion.question);
+      let opts = [
+        ...currentQuestion.incorrect_answers.map(a=>decode(a)),
+        decode(currentQuestion.correct_answer)
+      ];
+      shuffle(opts);
+      opts.forEach(opt=>{
+        const btn=document.createElement('button');
+        btn.textContent=opt;
+        btn.onclick=()=>checkAnswer(opt,btn);
+        document.getElementById('answers').appendChild(btn);
+      });
+
+      updateLadder();
+    }
+
+    function checkAnswer(choice,btn){
+      clearInterval(timerId);
+      disableAnswers();
+      const correct = decode(currentQuestion.correct_answer);
+      if(choice===correct){
+        showFeedback('Correct!','lime');
+        btn.classList.add('correct');
+        setTimeout(()=>{
+          questionIndex++;
+          if(questionIndex<prizeLevels.length) loadQuestion();
+          else showDialog('winModal');
+        },1500);
+      } else {
+        showFeedback('Wrong!','red');
+        btn.classList.add('incorrect');
+        document.querySelectorAll('#answers button').forEach(b=>{
+          if(b.textContent===correct){
+            b.classList.add('flash-correct');
+          }
+        });
+        setTimeout(()=> endGame("Wrong answer!"),3000);
+      }
+    }
+
+    function disableAnswers(){
+      document.querySelectorAll('#answers button').forEach(b=>b.disabled=true);
+    }
+    function showFeedback(msg,color){
+      const f=document.getElementById('feedback');
+      f.textContent=msg; f.style.color=color; f.style.display='block';
+    }
+    function hideFeedback(){
+      document.getElementById('feedback').style.display='none';
+    }
+
+    // Lifelines
+    function useFiftyFifty(){
+      const correct=decode(currentQuestion.correct_answer);
+      let removed=0;
+      document.querySelectorAll('#answers button').forEach(b=>{
+        if(b.textContent!==correct && removed<2){
+          b.style.display='none';
+          removed++;
+        }
+      });
+      fifty.disabled=true;
+    }
+    function usePhoneAFriend(){
+      const correct=decode(currentQuestion.correct_answer);
+      const wrongs=currentQuestion.incorrect_answers.map(a=>decode(a));
+      const pick=Math.random()<0.7 ? correct : wrongs[Math.floor(Math.random()*wrongs.length)];
+      document.getElementById('friendHelp').textContent=`Your friend thinks it is: ${pick}`;
+      showDialog('friendModal');
+      phone.disabled=true;
+    }
+    function useNewQuestion(){
+      newQ.disabled=true;
+      loadQuestion();
+    }
+
+    // Prize ladder UI
+    function updateLadder(){
+      const lad=document.getElementById('ladder');
+      lad.innerHTML='';
+      prizeLevels.slice().reverse().forEach((p,i)=>{
+        const idx=prizeLevels.length-1-i;
+        const d=document.createElement('div');
+        d.className= idx===questionIndex ? 'prize active-prize' : 'prize';
+        d.textContent=p;
+        lad.appendChild(d);
+      });
+    }
+
+    // End game
+    function endGame(msg){
+      clearInterval(timerId);
+      document.getElementById('endMessage').textContent=msg + ' Play again?';
+      showDialog('endModal');
+    }
+    function restartGame(){
+      closeDialog('endModal');
+      questionIndex=0;
+      [fifty,phone,newQ].forEach(b=>b.disabled=false);
+      loadQuestion();
+    }
+
+    // Hall of Fame
+    function saveWinner(){
+      const ini=document.getElementById('initials').value.trim().toUpperCase();
+      if(!ini) return;
+      const board=JSON.parse(localStorage.getItem('winners')||'[]');
+      board.push({initials:ini, date:new Date().toLocaleDateString()});
+      localStorage.setItem('winners', JSON.stringify(board));
+      closeDialog('winModal');
+      showHallOfFame();
+    }
+    function showHallOfFame(){
+      const board=JSON.parse(localStorage.getItem('winners')||'[]');
+      document.getElementById('winnersList').innerHTML=
+        board.map(w=>`<li>${w.initials} – ${w.date}</li>`).join('');
+      showDialog('hallOfFame');
+    }
+    document.getElementById('hallOfFame')
+      .addEventListener('close', ()=> endGame("Great job!"));
+
+    // Kick things off
+    loadQuestion();
+  </script>
+</body>
+</html>
+```

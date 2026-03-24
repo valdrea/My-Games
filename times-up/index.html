@@ -1,0 +1,855 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Time's Up! | Neon Bomb Defusal</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Arial', sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+            transition: background 0.5s ease;
+            perspective: 1000px;
+            overflow: hidden;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 1rem;
+            flex-shrink: 0;
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.3rem;
+            background: linear-gradient(45deg, #ff00ff, #00ffff);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            text-shadow: 0 0 15px rgba(255, 0, 255, 0.7);
+            animation: titleGlow 2s infinite alternate;
+            transform: translateZ(20px);
+        }
+        
+        @keyframes titleGlow {
+            from { text-shadow: 0 0 10px rgba(255, 0, 255, 0.7), 0 0 20px rgba(255, 0, 255, 0.5); }
+            to { text-shadow: 0 0 15px rgba(0, 255, 255, 0.7), 0 0 30px rgba(0, 255, 255, 0.5); }
+        }
+        
+        .game-container {
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 1.5rem;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.3),
+                        0 8px 20px rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            max-width: 500px;
+            width: 100%;
+            transform-style: preserve-3d;
+            transform: translateZ(10px);
+            flex-shrink: 0;
+        }
+        
+        .status {
+            text-align: center;
+            margin-bottom: 1rem;
+            font-size: 1.2rem;
+            height: 1.8rem;
+            color: #00ffff;
+            text-shadow: 0 0 8px rgba(0, 255, 255, 0.7);
+            transition: all 0.5s ease;
+            font-weight: bold;
+            transform: translateZ(15px);
+        }
+        
+        .difficulty {
+            margin: 1rem 0;
+            text-align: center;
+            transform: translateZ(15px);
+        }
+        
+        select, button {
+            background: rgba(0, 0, 0, 0.3);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 0.5rem 0.8rem;
+            border-radius: 6px;
+            margin: 0 0.3rem;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+            transform: translateZ(5px);
+        }
+        
+        button {
+            background: linear-gradient(45deg, #ff00ff, #00ffff);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        button:hover {
+            transform: translateY(-2px) translateZ(8px);
+            box-shadow: 0 4px 10px rgba(0, 255, 255, 0.5);
+        }
+        
+        .bomb-container {
+            position: relative;
+            width: 200px;
+            height: 180px;
+            margin: 0.5rem auto;
+            transform-style: preserve-3d;
+            transform: translateZ(20px);
+        }
+        
+        .crate {
+            position: absolute;
+            width: 150px;
+            height: 120px;
+            background: linear-gradient(135deg, #8B4513, #6B3100);
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.6),
+                        inset 0 0 15px rgba(0, 0, 0, 0.4);
+            border: 3px solid #5A2700;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+        
+        .crate::before {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 15px;
+            background: linear-gradient(to bottom, #9C5D2A, #7A3F10);
+            top: 25px;
+            left: 0;
+        }
+        
+        .crate::after {
+            content: '';
+            position: absolute;
+            width: 15px;
+            height: 100%;
+            background: linear-gradient(to right, #9C5D2A, #7A3F10);
+            left: 25px;
+            top: 0;
+        }
+        
+        .timer-display {
+            position: absolute;
+            width: 70px;
+            height: 30px;
+            background: #111;
+            border: 3px solid #333;
+            border-radius: 5px;
+            top: 45px;
+            right: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Courier New', monospace;
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #ff0000;
+            text-shadow: 0 0 10px rgba(255, 0, 0, 0.8);
+            box-shadow: 0 0 15px rgba(255, 0, 0, 0.5),
+                        inset 0 0 10px rgba(100, 0, 0, 0.8);
+            z-index: 3;
+        }
+        
+        .timer-display.critical {
+            animation: blink 0.5s infinite alternate;
+        }
+        
+        @keyframes blink {
+            from { color: #ff0000; text-shadow: 0 0 10px rgba(255, 0, 0, 0.8); }
+            to { color: #ffffff; text-shadow: 0 0 15px rgba(255, 255, 255, 0.9); }
+        }
+        
+        .sparks {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background: radial-gradient(circle, #ffff00, #ff9900, transparent);
+            border-radius: 50%;
+            top: 15px;
+            right: 40px;
+            opacity: 0.9;
+            animation: sparkle 0.8s infinite alternate;
+            z-index: 1;
+        }
+        
+        @keyframes sparkle {
+            from { transform: scale(0.8); opacity: 0.7; }
+            to { transform: scale(1.2); opacity: 1; }
+        }
+        
+        .word-display {
+            display: flex;
+            justify-content: center;
+            gap: 0.5rem;
+            margin: 1.5rem 0;
+            flex-wrap: nowrap;
+            transform: translateZ(10px);
+            overflow-x: auto;
+            padding: 0.5rem;
+            max-width: 100%;
+        }
+        
+        .letter {
+            width: 35px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+            border-bottom: 3px solid #00ffff;
+            text-transform: uppercase;
+            color: transparent;
+            text-shadow: 0 0 8px rgba(0, 255, 255, 0.7);
+            transition: all 0.3s ease;
+            flex-shrink: 0;
+        }
+        
+        .letter.revealed {
+            color: #00ffff;
+            transform: translateY(-5px);
+        }
+        
+        .category {
+            text-align: center;
+            margin: 0.5rem 0;
+            font-size: 1.1rem;
+            color: #ff00ff;
+            text-shadow: 0 0 8px rgba(255, 0, 255, 0.7);
+            transform: translateZ(10px);
+        }
+        
+        .keyboard {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.4rem;
+            justify-content: center;
+            margin: 1rem 0;
+            transform: translateZ(10px);
+        }
+        
+        .key {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+        }
+        
+        .key:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateY(-3px);
+        }
+        
+        .key.used {
+            opacity: 0.3;
+            cursor: not-allowed;
+            transform: scale(0.9);
+        }
+        
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 0.8rem;
+            margin-top: 1rem;
+            transform: translateZ(12px);
+        }
+        
+        #moodButton {
+            background: linear-gradient(45deg, #ff00ff, #ff9900, #00ffff);
+            background-size: 200% 200%;
+            animation: gradientShift 3s infinite alternate;
+        }
+        
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            100% { background-position: 100% 50%; }
+        }
+        
+        .score-board {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 1rem;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 0.8rem;
+            border-radius: 10px;
+            width: 100%;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            transform: translateZ(8px);
+        }
+        
+        .score {
+            text-align: center;
+            position: relative;
+            padding: 0 0.6rem;
+        }
+        
+        .score::after {
+            content: '';
+            position: absolute;
+            right: 0;
+            top: 10%;
+            height: 80%;
+            width: 1px;
+            background: linear-gradient(to bottom, transparent, rgba(255, 255, 255, 0.2), transparent);
+        }
+        
+        .score:last-child::after {
+            display: none;
+        }
+        
+        .score-value {
+            font-size: 1.4rem;
+            font-weight: bold;
+            color: #00ffff;
+            text-shadow: 0 0 8px rgba(0, 255, 255, 0.7);
+            margin-top: 0.3rem;
+            display: inline-block;
+            min-width: 30px;
+        }
+        
+        footer {
+            margin-top: 1rem;
+            text-align: center;
+            color: rgba(255, 255, 255, 0.5);
+            transform: translateZ(8px);
+            font-size: 0.8rem;
+        }
+        
+        .explosion {
+            position: absolute;
+            width: 300px;
+            height: 300px;
+            border-radius: 50%;
+            background: radial-gradient(circle, #ff5500 0%, #ff0000 40%, transparent 70%);
+            opacity: 0;
+            pointer-events: none;
+            z-index: 100;
+            transform: translate(-50%, -50%) scale(0);
+            transition: transform 0.5s ease-out, opacity 0.5s ease-out;
+        }
+        
+        .word-management {
+            margin-top: 1rem;
+            text-align: center;
+        }
+        
+        .word-management textarea {
+            width: 100%;
+            height: 80px;
+            background: rgba(0, 0, 0, 0.3);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 5px;
+            padding: 0.5rem;
+            margin-bottom: 0.5rem;
+            resize: vertical;
+        }
+        
+        @media (max-height: 700px) {
+            h1 {
+                font-size: 2rem;
+            }
+            
+            .game-container {
+                padding: 1rem;
+                max-width: 450px;
+            }
+            
+            .bomb-container {
+                width: 180px;
+                height: 160px;
+            }
+            
+            .crate {
+                width: 130px;
+                height: 100px;
+            }
+            
+            .timer-display {
+                width: 60px;
+                height: 25px;
+                font-size: 1.3rem;
+                top: 35px;
+                right: 5px;
+            }
+            
+            .sparks {
+                right: 30px;
+            }
+            
+            .letter {
+                width: 30px;
+                height: 35px;
+                font-size: 1.3rem;
+            }
+            
+            .key {
+                width: 28px;
+                height: 28px;
+                font-size: 0.9rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="explosion" id="explosion"></div>
+    
+    <header>
+        <h1>TIME'S UP!</h1>
+        <p>Defuse the bomb by guessing the word!</p>
+    </header>
+    
+    <div class="game-container">
+        <div class="status" id="status">Select difficulty to start</div>
+        
+        <div class="difficulty">
+            <label for="gameDifficulty">Difficulty:</label>
+            <select id="gameDifficulty">
+                <option value="easy">Easy (120s)</option>
+                <option value="medium" selected>Medium (90s)</option>
+                <option value="hard">Hard (60s)</option>
+            </select>
+            <button id="startBtn">Start Game</button>
+        </div>
+        
+        <div class="bomb-container">
+            <div class="sparks"></div>
+            <div class="crate">
+                <div class="timer-display" id="timer">00</div>
+            </div>
+        </div>
+        
+        <div class="category" id="category">Category: -</div>
+        
+        <div class="word-display" id="wordDisplay">
+            <!-- Letters will be generated here -->
+        </div>
+        
+        <div class="keyboard" id="keyboard">
+            <!-- Keyboard will be generated here -->
+        </div>
+        
+        <div class="controls">
+            <button id="moodButton">Change Mood</button>
+            <button id="hintButton">Hint</button>
+        </div>
+        
+        <div class="score-board">
+            <div class="score">
+                <div>Defused</div>
+                <div class="score-value" id="defusedScore">0</div>
+            </div>
+            <div class="score">
+                <div>Exploded</div>
+                <div class="score-value" id="explodedScore">0</div>
+            </div>
+            <div class="score">
+                <div>Streak</div>
+                <div class="score-value" id="streakScore">0</div>
+            </div>
+        </div>
+        
+        <div class="word-management">
+            <h3>Add Your Own Words</h3>
+            <select id="wordCategory">
+                <option value="animals">Animals</option>
+                <option value="countries">Countries</option>
+                <option value="fruits">Fruits</option>
+                <option value="professions">Professions</option>
+                <option value="sports">Sports</option>
+                <option value="movies">Movies</option>
+                <option value="technology">Technology</option>
+                <option value="food">Food</option>
+                <option value="music">Music</option>
+                <option value="science">Science</option>
+            </select>
+            <textarea id="customWords" placeholder="Enter words separated by commas (e.g., DOG,CAT,BIRD)"></textarea>
+            <button id="addWordsBtn">Add Words</button>
+        </div>
+    </div>
+    
+    <footer>
+        <p>Created with AI assistance | Game Hub Project | 2025 Edition</p>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Game state variables
+            let gameActive = false;
+            let timer = null;
+            let timeLeft = 0;
+            let currentWord = '';
+            let currentCategory = '';
+            let revealedLetters = [];
+            let usedLetters = [];
+            let scores = {
+                defused: 0,
+                exploded: 0,
+                streak: 0
+            };
+            
+            // Word database by category - using shorter words to prevent wrapping
+            let wordDatabase = {
+                animals: ['LION', 'BEAR', 'FROG', 'FISH', 'BIRD', 'WOLF', 'SNAKE', 'EAGLE', 'SHARK', 'ZEBRA'],
+                countries: ['USA', 'JAPAN', 'CHILE', 'EGYPT', 'ITALY', 'SPAIN', 'CHINA', 'INDIA', 'BRAZIL', 'CANADA'],
+                fruits: ['APPLE', 'PEAR', 'KIWI', 'MANGO', 'GRAPE', 'LEMON', 'MELON', 'PEACH', 'PLUM', 'BERRY'],
+                professions: ['CHEF', 'NURSE', 'JUDGE', 'ACTOR', 'ARTIST', 'PILOT', 'WRITER', 'LAWYER', 'FARMER', 'DRIVER'],
+                sports: ['GOLF', 'TENNIS', 'HOCKEY', 'SOCCER', 'RUGBY', 'BOXING', 'CYCLING', 'SURFING', 'SKIING', 'DIVING'],
+                movies: ['ALIEN', 'FROZEN', 'TITANIC', 'ROCKY', 'JAWS', 'TOY', 'AVATAR', 'GLADIATOR', 'BATMAN', 'SING'],
+                technology: ['PHONE', 'DRONE', 'ROBOT', 'LASER', 'WIFI', 'EMAIL', 'VIDEO', 'APP', 'CODE', 'CHIP'],
+                food: ['PIZZA', 'PASTA', 'SALAD', 'BREAD', 'STEW', 'SOUP', 'CAKE', 'PIE', 'TACO', 'SUSHI'],
+                music: ['SONG', 'BAND', 'ROCK', 'JAZZ', 'RAP', 'DISCO', 'OPERA', 'PIANO', 'GUITAR', 'DRUM'],
+                science: ['ATOM', 'CELL', 'GENE', 'WAVE', 'ACID', 'BASE', 'FORCE', 'SPACE', 'EARTH', 'WATER']
+            };
+            
+            // Load words from localStorage if available
+            function loadWordsFromStorage() {
+                const storedWords = localStorage.getItem('wordDatabase');
+                if (storedWords) {
+                    wordDatabase = JSON.parse(storedWords);
+                }
+            }
+            
+            // Save words to localStorage
+            function saveWordsToStorage() {
+                localStorage.setItem('wordDatabase', JSON.stringify(wordDatabase));
+            }
+            
+            // Add custom words to the database
+            function addCustomWords() {
+                const category = document.getElementById('wordCategory').value;
+                const wordsText = document.getElementById('customWords').value.trim().toUpperCase();
+                
+                if (!wordsText) return;
+                
+                const newWords = wordsText.split(',').map(word => word.trim()).filter(word => word.length > 0);
+                
+                if (!wordDatabase[category]) {
+                    wordDatabase[category] = [];
+                }
+                
+                // Add new words, avoiding duplicates
+                for (const word of newWords) {
+                    if (!wordDatabase[category].includes(word)) {
+                        wordDatabase[category].push(word);
+                    }
+                }
+                
+                saveWordsToStorage();
+                document.getElementById('customWords').value = '';
+                alert(`Added ${newWords.length} words to ${category} category!`);
+            }
+            
+            // Color themes for mood changes
+            const colorThemes = [
+                { primary: '#ff00ff', secondary: '#00ffff', bg: 'linear-gradient(135deg, #1a1a2e, #16213e)' },
+                { primary: '#ff9900', secondary: '#9900ff', bg: 'linear-gradient(135deg, #2e1a2e, #2e162e)' },
+                { primary: '#00ff99', secondary: '#ff0066', bg: 'linear-gradient(135deg, #1a2e2e, #162e2e)' },
+                { primary: '#ffff00', secondary: '#ff00ff', bg: 'linear-gradient(135deg, #2e2e1a, #2e2e16)' },
+                { primary: '#00ffff', secondary: '#ff9900', bg: 'linear-gradient(135deg, #1a2e1a, #162e16)' }
+            ];
+            
+            // DOM elements
+            const statusDisplay = document.getElementById('status');
+            const timerDisplay = document.getElementById('timer');
+            const categoryDisplay = document.getElementById('category');
+            const wordDisplay = document.getElementById('wordDisplay');
+            const keyboard = document.getElementById('keyboard');
+            const startBtn = document.getElementById('startBtn');
+            const moodButton = document.getElementById('moodButton');
+            const hintButton = document.getElementById('hintButton');
+            const difficultySelect = document.getElementById('gameDifficulty');
+            const defusedScoreElem = document.getElementById('defusedScore');
+            const explodedScoreElem = document.getElementById('explodedScore');
+            const streakScoreElem = document.getElementById('streakScore');
+            const explosionElem = document.getElementById('explosion');
+            const addWordsBtn = document.getElementById('addWordsBtn');
+            
+            // Initialize keyboard
+            function initKeyboard() {
+                keyboard.innerHTML = '';
+                for (let i = 65; i <= 90; i++) {
+                    const letter = String.fromCharCode(i);
+                    const key = document.createElement('div');
+                    key.className = 'key';
+                    key.textContent = letter;
+                    key.dataset.letter = letter;
+                    key.addEventListener('click', () => handleLetterClick(letter));
+                    keyboard.appendChild(key);
+                }
+            }
+            
+            // Start a new game
+            function startGame() {
+                if (gameActive) return;
+                
+                // Reset game state
+                gameActive = true;
+                usedLetters = [];
+                revealedLetters = [];
+                
+                // Set time based on difficulty
+                const difficulty = difficultySelect.value;
+                if (difficulty === 'easy') timeLeft = 120;
+                else if (difficulty === 'medium') timeLeft = 90;
+                else timeLeft = 60;
+                
+                // Select random category and word
+                const categories = Object.keys(wordDatabase).filter(cat => wordDatabase[cat].length > 0);
+                
+                if (categories.length === 0) {
+                    alert("No words available! Please add some words first.");
+                    gameActive = false;
+                    return;
+                }
+                
+                currentCategory = categories[Math.floor(Math.random() * categories.length)];
+                const words = wordDatabase[currentCategory];
+                currentWord = words[Math.floor(Math.random() * words.length)];
+                
+                // Update UI
+                statusDisplay.textContent = 'Guess the word to defuse the bomb!';
+                categoryDisplay.textContent = `Category: ${currentCategory}`;
+                updateTimerDisplay();
+                renderWordDisplay();
+                initKeyboard();
+                resetBomb();
+                
+                // Start timer
+                clearInterval(timer);
+                timer = setInterval(updateTimer, 1000);
+                
+                // Update button text
+                startBtn.textContent = 'Restart Game';
+            }
+            
+            // Update timer
+            function updateTimer() {
+                timeLeft--;
+                updateTimerDisplay();
+                
+                if (timeLeft <= 0) {
+                    endGame(false);
+                } else if (timeLeft <= 10) {
+                    timerDisplay.classList.add('critical');
+                } else {
+                    timerDisplay.classList.remove('critical');
+                }
+            }
+            
+            // Update timer display
+            function updateTimerDisplay() {
+                timerDisplay.textContent = timeLeft.toString().padStart(2, '0');
+            }
+            
+            // Render word display
+            function renderWordDisplay() {
+                wordDisplay.innerHTML = '';
+                for (let i = 0; i < currentWord.length; i++) {
+                    const letter = currentWord[i];
+                    const letterElem = document.createElement('div');
+                    letterElem.className = 'letter';
+                    if (revealedLetters.includes(letter) || letter === ' ') {
+                        letterElem.textContent = letter;
+                        letterElem.classList.add('revealed');
+                    }
+                    wordDisplay.appendChild(letterElem);
+                }
+            }
+            
+            // Handle letter click
+            function handleLetterClick(letter) {
+                if (!gameActive || usedLetters.includes(letter)) return;
+                
+                usedLetters.push(letter);
+                document.querySelector(`.key[data-letter="${letter}"]`).classList.add('used');
+                
+                if (currentWord.includes(letter)) {
+                    // Correct guess
+                    revealedLetters.push(letter);
+                    renderWordDisplay();
+                    
+                    // Check if word is complete
+                    if (isWordComplete()) {
+                        endGame(true);
+                    }
+                } else {
+                    // Incorrect guess - penalize time
+                    timeLeft = Math.max(0, timeLeft - 5);
+                    updateTimerDisplay();
+                }
+            }
+            
+            // Check if word is complete
+            function isWordComplete() {
+                for (let i = 0; i < currentWord.length; i++) {
+                    const letter = currentWord[i];
+                    if (letter !== ' ' && !revealedLetters.includes(letter)) {
+                        return false;
+                    }
+                }
+                return true;
+            }
+            
+            // End game
+            function endGame(success) {
+                clearInterval(timer);
+                gameActive = false;
+                timerDisplay.classList.remove('critical');
+                
+                if (success) {
+                    statusDisplay.textContent = 'Bomb defused! Well done!';
+                    scores.defused++;
+                    scores.streak++;
+                    defusedScoreElem.textContent = scores.defused;
+                    streakScoreElem.textContent = scores.streak;
+                } else {
+                    statusDisplay.textContent = 'BOOM! The bomb exploded!';
+                    triggerExplosion();
+                    scores.exploded++;
+                    scores.streak = 0;
+                    explodedScoreElem.textContent = scores.exploded;
+                    streakScoreElem.textContent = 0;
+                    
+                    // Reveal the word
+                    for (let i = 0; i < currentWord.length; i++) {
+                        revealedLetters.push(currentWord[i]);
+                    }
+                    renderWordDisplay();
+                }
+                
+                startBtn.textContent = 'Play Again';
+            }
+            
+            // Trigger explosion animation
+            function triggerExplosion() {
+                const bombRect = document.querySelector('.bomb-container').getBoundingClientRect();
+                const bombX = bombRect.left + bombRect.width / 2;
+                const bombY = bombRect.top + bombRect.height / 2;
+                
+                explosionElem.style.left = `${bombX}px`;
+                explosionElem.style.top = `${bombY}px`;
+                explosionElem.style.opacity = '1';
+                explosionElem.style.transform = 'translate(-50%, -50%) scale(1)';
+                
+                setTimeout(() => {
+                    explosionElem.style.opacity = '0';
+                    explosionElem.style.transform = 'translate(-50%, -50%) scale(0)';
+                }, 1000);
+            }
+            
+            // Reset bomb appearance
+            function resetBomb() {
+                timerDisplay.classList.remove('critical');
+            }
+            
+            // Provide hint
+            function provideHint() {
+                if (!gameActive || isWordComplete()) return;
+                
+                // Find a letter that hasn't been revealed yet
+                const unrevealedLetters = [];
+                for (let i = 0; i < currentWord.length; i++) {
+                    const letter = currentWord[i];
+                    if (letter !== ' ' && !revealedLetters.includes(letter) && !unrevealedLetters.includes(letter)) {
+                        unrevealedLetters.push(letter);
+                    }
+                }
+                
+                if (unrevealedLetters.length > 0) {
+                    const randomLetter = unrevealedLetters[Math.floor(Math.random() * unrevealedLetters.length)];
+                    revealedLetters.push(randomLetter);
+                    renderWordDisplay();
+                    
+                    // Penalize time for using hint
+                    timeLeft = Math.max(0, timeLeft - 10);
+                    updateTimerDisplay();
+                    
+                    // Check if word is complete
+                    if (isWordComplete()) {
+                        endGame(true);
+                    }
+                }
+            }
+            
+            // Change color theme
+            function changeMood() {
+                const randomTheme = colorThemes[Math.floor(Math.random() * colorThemes.length)];
+                
+                // Update body background
+                document.body.style.background = randomTheme.bg;
+                
+                // Update status and category colors
+                statusDisplay.style.color = randomTheme.primary;
+                statusDisplay.style.textShadow = `0 0 8px ${randomTheme.primary}80`;
+                categoryDisplay.style.color = randomTheme.primary;
+                categoryDisplay.style.textShadow = `0 0 8px ${randomTheme.primary}80`;
+                
+                // Update letter colors
+                document.querySelectorAll('.letter').forEach(letter => {
+                    letter.style.borderBottomColor = randomTheme.secondary;
+                    if (letter.classList.contains('revealed')) {
+                        letter.style.color = randomTheme.secondary;
+                        letter.style.textShadow = `0 0 8px ${randomTheme.secondary}80`;
+                    }
+                });
+                
+                // Update score colors
+                document.querySelectorAll('.score-value').forEach(score => {
+                    score.style.color = randomTheme.secondary;
+                    score.style.textShadow = `0 0 8px ${randomTheme.secondary}80`;
+                });
+            }
+            
+            // Add event listeners
+            startBtn.addEventListener('click', startGame);
+            moodButton.addEventListener('click', changeMood);
+            hintButton.addEventListener('click', provideHint);
+            addWordsBtn.addEventListener('click', addCustomWords);
+            
+            // Initialize the game
+            loadWordsFromStorage();
+            initKeyboard();
+            updateScores();
+            
+            function updateScores() {
+                defusedScoreElem.textContent = scores.defused;
+                explodedScoreElem.textContent = scores.exploded;
+                streakScoreElem.textContent = scores.streak;
+            }
+            
+            // Initialize with a random theme
+            changeMood();
+        });
+    </script>
+</body>
+</html>

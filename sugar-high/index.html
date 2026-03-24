@@ -1,0 +1,1737 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sugar High - 80s Match-3 Puzzle</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(to bottom, #0a0015, #1a0033);
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            position: relative;
+            padding: 10px;
+        }
+        
+        body::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(circle at 20% 30%, rgba(106, 27, 154, 0.3) 0%, transparent 50%),
+                radial-gradient(circle at 80% 70%, rgba(33, 150, 243, 0.3) 0%, transparent 50%);
+            z-index: -1;
+        }
+        
+        .grid-lines {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                linear-gradient(to right, rgba(255, 0, 255, 0.1) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255, 0, 255, 0.1) 1px, transparent 1px);
+            background-size: 20px 20px;
+            z-index: -1;
+        }
+        
+        .container {
+            width: 100%;
+            max-width: 560px;
+            background: rgba(10, 0, 30, 0.8);
+            border: 2px solid #7b1fa2;
+            border-radius: 15px;
+            box-shadow: 
+                0 0 20px rgba(156, 39, 176, 0.7),
+                0 0 40px rgba(33, 150, 243, 0.5);
+            padding: 15px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .container::before {
+            content: '';
+            position: absolute;
+            top: -10px;
+            left: -10px;
+            right: -10px;
+            bottom: -10px;
+            background: linear-gradient(45deg, #ff00ff, #00ffff, #ff00ff, #00ffff);
+            background-size: 400% 400%;
+            z-index: -1;
+            animation: gradientShift 10s ease infinite;
+            filter: blur(15px);
+            opacity: 0.3;
+        }
+        
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid rgba(156, 39, 176, 0.5);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .title {
+            font-size: 1.8rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            background: linear-gradient(to right, #ff00ff, #00ffff);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            text-shadow: 0 0 10px rgba(255, 0, 255, 0.7);
+            letter-spacing: 2px;
+            flex: 1;
+            text-align: center;
+        }
+        
+        .subtitle {
+            font-size: 1.1rem;
+            color: #bb86fc;
+            letter-spacing: 1px;
+            text-align: center;
+            font-weight: bold;
+            text-shadow: 0 0 5px rgba(187, 134, 252, 0.8);
+            margin-top: 5px;
+        }
+        
+        .dot-matrix-display {
+            background: linear-gradient(to bottom, #3d2817, #1f140c);
+            border: 3px solid #a65d1a;
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 10px;
+            color: #ff9d00;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            text-shadow: 0 0 5px #ff9d00;
+            box-shadow: inset 0 0 10px #000, 0 0 15px #ff9d0055;
+            min-height: 80px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .dot-matrix-display::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(circle at 20% 30%, transparent 1px, rgba(0, 0, 0, 0.3) 1px) 0 0 / 10px 10px,
+                radial-gradient(circle at 20% 30%, transparent 1px, rgba(0, 0, 0, 0.3) 1px) 5px 5px / 10px 10px;
+            pointer-events: none;
+        }
+        
+        .display-message {
+            font-size: 1.2rem;
+            text-align: center;
+            margin-bottom: 5px;
+            animation: textGlow 2s infinite alternate;
+        }
+        
+        .display-stats {
+            display: flex;
+            justify-content: space-around;
+            width: 100%;
+            font-size: 0.9rem;
+        }
+        
+        @keyframes textGlow {
+            0% { text-shadow: 0 0 5px #ff9d00; }
+            100% { text-shadow: 0 0 15px #ff9d00, 0 0 20px #ff9d00; }
+        }
+        
+        .game-board {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            grid-gap: 3px;
+            margin-bottom: 10px;
+            background: rgba(20, 0, 40, 0.7);
+            padding: 6px;
+            border-radius: 8px;
+            box-shadow: 0 0 12px rgba(33, 150, 243, 0.4);
+        }
+        
+        .tile {
+            aspect-ratio: 1/1;
+            border-radius: 4px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: transform 0.4s, box-shadow 0.4s, filter 0.4s;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 
+                0 3px 6px rgba(0, 0, 0, 0.3),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2);
+            color: white;
+            font-weight: bold;
+            filter: brightness(0.95);
+        }
+        
+        /* Enhanced shiny effect for tiles */
+        .tile::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+            transform: rotate(45deg);
+            transition: all 0.5s;
+            opacity: 0.6;
+        }
+        
+        .tile:hover::after {
+            left: 100%;
+            top: 100%;
+        }
+        
+        .tile.hint {
+            animation: hintPulse 1s infinite;
+        }
+        
+        @keyframes hintPulse {
+            0% { box-shadow: 0 0 5px 2px #ffffff; }
+            50% { box-shadow: 0 0 10px 4px #ffffff; }
+            100% { box-shadow: 0 0 5px 2px #ffffff; }
+        }
+        
+        .tile.magic {
+            animation: magicPulse 2s infinite;
+            background: linear-gradient(135deg, #ff00ff 0%, #cc00cc 100%) !important;
+            border: 2px solid #000;
+            box-shadow: 0 0 0 2px #000, 0 0 10px rgba(255, 0, 255, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+        }
+        
+        .tile.shuffle {
+            background: linear-gradient(to bottom, #ffffff, #cccccc);
+            color: black;
+        }
+        
+        @keyframes magicPulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.08); }
+            100% { transform: scale(1); }
+        }
+        
+        .tile:hover {
+            transform: translateY(-2px);
+            box-shadow: 
+                0 4px 8px rgba(0, 0, 0, 0.4),
+                inset 0 1px 0 rgba(255, 255, 255, 0.3);
+            filter: brightness(1.15);
+        }
+        
+        .tile.selected {
+            transform: scale(1.08);
+            box-shadow: 0 0 12px currentColor;
+            z-index: 2;
+            filter: brightness(1.2);
+        }
+        
+        .tile.matched {
+            animation: matched 1.2s forwards;
+        }
+        
+        @keyframes matched {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.15); opacity: 0.7; }
+            100% { transform: scale(0); opacity: 0; }
+        }
+        
+        /* Enhanced tile colors with brighter, candy-like gradients */
+        .tile-1 { 
+            background: linear-gradient(135deg, #ff00ff 0%, #cc00cc 100%);
+            box-shadow: 0 0 10px rgba(255, 0, 255, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+        }
+        .tile-2 { 
+            background: linear-gradient(135deg, #00ffff 0%, #00cccc 100%);
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+        }
+        .tile-3 { 
+            background: linear-gradient(135deg, #ffeb3b 0%, #ffcc00 100%);
+            box-shadow: 0 0 10px rgba(255, 235, 59, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+        }
+        .tile-4 { 
+            background: linear-gradient(135deg, #76ff03 0%, #44cc00 100%);
+            box-shadow: 0 0 10px rgba(118, 255, 3, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+        }
+        .tile-5 { 
+            background: linear-gradient(135deg, #ff5252 0%, #cc0000 100%);
+            box-shadow: 0 0 10px rgba(255, 82, 82, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+        }
+        
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+        
+        .abilities {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        
+        /* Enhanced button styles with shiny effect */
+        .btn {
+            background: linear-gradient(to bottom, #7b1fa2, #4a148c);
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 25px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 
+                0 3px 6px rgba(0, 0, 0, 0.3),
+                0 0 8px rgba(156, 39, 176, 0.7);
+        }
+        
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+            transition: all 0.5s;
+        }
+        
+        .btn:hover::before {
+            left: 100%;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 
+                0 5px 10px rgba(0, 0, 0, 0.4),
+                0 0 12px rgba(156, 39, 176, 1);
+        }
+        
+        .ability-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            cursor: pointer;
+            width: 70px;
+        }
+        
+        .ability-icon {
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            margin-bottom: 5px;
+            box-shadow: 0 0 8px currentColor;
+            transition: all 0.3s;
+            position: relative;
+        }
+        
+        .ability-charges {
+            display: flex;
+            gap: 3px;
+            margin-top: 3px;
+        }
+        
+        .charge-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.3);
+        }
+        
+        .charge-dot.active {
+            background: #03dac6;
+            box-shadow: 0 0 4px #03dac6;
+        }
+        
+        .ability-icon.active {
+            transform: scale(1.15);
+            box-shadow: 0 0 12px currentColor;
+        }
+        
+        .ability-name {
+            font-size: 0.7rem;
+            color: #bb86fc;
+            text-align: center;
+            margin-top: 2px;
+        }
+        
+        .footer {
+            text-align: center;
+            font-size: 0.6rem;
+            color: #bb86fc;
+            padding-top: 8px;
+            border-top: 1px solid rgba(156, 39, 176, 0.5);
+        }
+        
+        .mountain-silhouette {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 60px;
+            background: 
+                linear-gradient(to bottom right, transparent 49%, #0a0015 50%),
+                linear-gradient(to bottom left, transparent 49%, #0a0015 50%);
+            background-size: 60px 60px;
+            background-repeat: repeat-x;
+            z-index: -1;
+        }
+        
+        .sun {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 50px;
+            height: 50px;
+            background: radial-gradient(circle, #ff4081 0%, #7b1fa2 70%);
+            border-radius: 50%;
+            box-shadow: 
+                0 0 15px #ff4081,
+                0 0 30px #ff4081,
+                0 0 50px #7b1fa2;
+            z-index: -1;
+        }
+        
+        .vibe-indicator {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #ff00ff;
+            box-shadow: 0 0 8px #ff00ff;
+        }
+        
+        /* Modal styles */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s;
+        }
+        
+        .modal.active {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        .modal-content {
+            background: linear-gradient(to bottom, #1a0033, #0a0015);
+            border: 2px solid #7b1fa2;
+            border-radius: 12px;
+            padding: 15px;
+            max-width: 450px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 0 25px rgba(156, 39, 176, 0.8);
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #7b1fa2;
+            position: relative;
+        }
+        
+        .modal-title {
+            font-size: 1.3rem;
+            color: #ff00ff;
+        }
+        
+        .close-modal {
+            background: transparent;
+            border: none;
+            color: #bb86fc;
+            font-size: 1.3rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 30px;
+            height: 30px;
+        }
+        
+        .how-to-play li {
+            margin-bottom: 8px;
+            line-height: 1.4;
+            font-size: 0.9rem;
+        }
+        
+        .game-over {
+            text-align: center;
+            font-size: 1.6rem;
+            color: #ff00ff;
+            margin: 15px 0;
+            text-shadow: 0 0 8px #ff00ff;
+        }
+        
+        /* Burn animation for magic tiles and bombs */
+        @keyframes burn {
+            0% { transform: scale(1); opacity: 1; filter: brightness(1) blur(0px); }
+            20% { transform: scale(1.2); opacity: 0.8; filter: brightness(1.5) blur(2px); }
+            50% { transform: scale(1.1); opacity: 0.6; filter: brightness(2) blur(4px); }
+            80% { transform: scale(0.9); opacity: 0.4; filter: brightness(2.5) blur(6px); }
+            100% { transform: scale(0); opacity: 0; filter: brightness(3) blur(8px); }
+        }
+        
+        .tile.burning {
+            animation: burn 1.5s forwards;
+        }
+        
+        /* Firework animation for level up */
+        .firework {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            width: 5px;
+            height: 5px;
+            border-radius: 50%;
+            background: #ffeb3b;
+            box-shadow: 0 0 10px #ff9800;
+            z-index: 103;
+            opacity: 0;
+            pointer-events: none;
+        }
+        
+        @keyframes firework {
+            0% { transform: translate(-50%, -50%) scale(0); opacity: 1; }
+            50% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+            100% { transform: translate(var(--tx), var(--ty)) scale(0); opacity: 0; }
+        }
+        
+        /* Screen wipe effects */
+        @keyframes screenWipe {
+            0% { clip-path: polygon(0 0, 100% 0, 100% 0, 0 0); }
+            100% { clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%); }
+        }
+        
+        .screen-wipe {
+            animation: screenWipe 0.5s ease-out forwards;
+        }
+        
+        @media (max-width: 600px) {
+            .title {
+                font-size: 1.5rem;
+            }
+            
+            .subtitle {
+                font-size: 1rem;
+            }
+            
+            .display-message {
+                font-size: 1rem;
+            }
+            
+            .display-stats {
+                font-size: 0.8rem;
+            }
+            
+            .btn {
+                padding: 6px 12px;
+                font-size: 0.7rem;
+            }
+            
+            .game-board {
+                grid-template-columns: repeat(8, 1fr);
+            }
+            
+            .tile {
+                font-size: 0.9rem;
+            }
+            
+            .ability-btn {
+                width: 60px;
+            }
+            
+            .ability-icon {
+                width: 35px;
+                height: 35px;
+                font-size: 1rem;
+            }
+            
+            .ability-name {
+                font-size: 0.6rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="grid-lines"></div>
+    <div class="mountain-silhouette"></div>
+    <div class="sun"></div>
+    <div class="vibe-indicator"></div>
+    
+    <div class="container">
+        <div class="header">
+            <button class="btn" id="help-btn">HOW TO PLAY</button>
+            <h1 class="title">SUGAR HIGH</h1>
+            <div style="width: 100px;"></div>
+        </div>
+        <p class="subtitle">80s Match-3 Puzzle Game</p>
+        
+        <div class="dot-matrix-display" id="dot-matrix-display">
+            <div class="display-message" id="display-message">WELCOME TO SUGAR HIGH!</div>
+            <div class="display-stats">
+                <div>SCORE: <span id="display-score">0</span></div>
+                <div>MOVES: <span id="display-moves">0</span></div>
+                <div>LEVEL: <span id="display-level">1</span></div>
+            </div>
+        </div>
+        
+        <div class="game-board" id="game-board"></div>
+        
+        <div class="abilities">
+            <div class="ability-btn" id="bomb-ability">
+                <div class="ability-icon" style="background: #ff9800; color: white;">
+                    <i class="fas fa-bomb"></i>
+                </div>
+                <div class="ability-charges">
+                    <div class="charge-dot" id="bomb-charge-1"></div>
+                    <div class="charge-dot" id="bomb-charge-2"></div>
+                    <div class="charge-dot" id="bomb-charge-3"></div>
+                </div>
+                <div class="ability-name">BOMB</div>
+            </div>
+            <div class="ability-btn" id="shuffle-ability">
+                <div class="ability-icon" style="background: #ffffff; color: black;">
+                    <i class="fas fa-random"></i>
+                </div>
+                <div class="ability-charges">
+                    <div class="charge-dot" id="shuffle-charge-1"></div>
+                    <div class="charge-dot" id="shuffle-charge-2"></div>
+                    <div class="charge-dot" id="shuffle-charge-3"></div>
+                </div>
+                <div class="ability-name">SHUFFLE</div>
+            </div>
+            <div class="ability-btn" id="hint-ability">
+                <div class="ability-icon" style="background: #00bcd4; color: white;">
+                    <i class="fas fa-lightbulb"></i>
+                </div>
+                <div class="ability-charges">
+                    <div class="charge-dot" id="hint-charge-1"></div>
+                    <div class="charge-dot" id="hint-charge-2"></div>
+                    <div class="charge-dot" id="hint-charge-3"></div>
+                </div>
+                <div class="ability-name">HINT</div>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <button class="btn" id="new-game">NEW GAME</button>
+            <button class="btn" id="change-mood">CHANGE MOOD</button>
+        </div>
+        
+        <div class="footer">
+            <p>Created with AI assistance | Game Hub Project | 2025 Edition</p>
+        </div>
+    </div>
+
+    <!-- How to Play Modal -->
+    <div class="modal" id="how-to-play-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">How to Play</h2>
+                <button class="close-modal">&times;</button>
+            </div>
+            <div class="how-to-play">
+                <h3>Game Rules</h3>
+                <ul>
+                    <li>Swap adjacent tiles to make matches of 3 or more of the same color</li>
+                    <li>Matches can be horizontal or vertical</li>
+                    <li>Clear tiles to score points and level up</li>
+                    <li>Earn bomb rewards every 1500 points</li>
+                    <li>Earn hint rewards by making 5+ matches or T/L shapes</li>
+                    <li>Find shuffle tiles (white with arrows) to earn shuffle rewards</li>
+                    <li>Magic tiles (purple with flame) clear all tiles of their color when they reach the bottom</li>
+                </ul>
+                
+                <h3>Controls</h3>
+                <ul>
+                    <li>Click a tile to select it, then click an adjacent tile to swap</li>
+                    <li>Click ability icons to use them</li>
+                    <li>Hints will show the best available move</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Game Over Modal -->
+    <div class="modal" id="game-over-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Game Over</h2>
+                <button class="close-modal">&times;</button>
+            </div>
+            <div class="game-over">
+                <p>No more moves!</p>
+            </div>
+            <p>Final Score: <span id="final-score">0</span></p>
+            <p>Level Reached: <span id="final-level">1</span></p>
+            <button class="btn" style="margin-top: 15px; width: 100%;" id="restart-btn">PLAY AGAIN</button>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const gameBoard = document.getElementById('game-board');
+            const displayMessage = document.getElementById('display-message');
+            const displayScore = document.getElementById('display-score');
+            const displayMoves = document.getElementById('display-moves');
+            const displayLevel = document.getElementById('display-level');
+            const dotMatrixDisplay = document.getElementById('dot-matrix-display');
+            const newGameBtn = document.getElementById('new-game');
+            const changeMoodBtn = document.getElementById('change-mood');
+            const helpBtn = document.getElementById('help-btn');
+            const howToPlayModal = document.getElementById('how-to-play-modal');
+            const gameOverModal = document.getElementById('game-over-modal');
+            const finalScoreElement = document.getElementById('final-score');
+            const finalLevelElement = document.getElementById('final-level');
+            const restartBtn = document.getElementById('restart-btn');
+            const closeModalButtons = document.querySelectorAll('.close-modal');
+            const bombAbility = document.getElementById('bomb-ability');
+            const shuffleAbility = document.getElementById('shuffle-ability');
+            const hintAbility = document.getElementById('hint-ability');
+            
+            // 80s compliments
+            const compliments = [
+                "AWESOME!", "RADICAL!", "GNARLY!", "TUBULAR!", "EXCELLENT!",
+                "GROOVY!", "FAR OUT!", "RIGHT ON!", "COWABUNGA!", "BODACIOUS!",
+                "OUTSTANDING!", "MARVELOUS!", "SPLENDID!", "FANTABULOUS!", "WICKED!"
+            ];
+            
+            let score = 0;
+            let moves = 0;
+            let level = 1;
+            let xp = 0;
+            let xpToNextLevel = 500;
+            let bombCount = 1;
+            let shuffleCount = 1;
+            let hintCount = 1;
+            let selectedTile = null;
+            let board = [];
+            const BOARD_SIZE = 8;
+            const TILE_TYPES = 5;
+            let isSwapping = false;
+            let isProcessing = false;
+            let comboCount = 0;
+            let comboMultiplier = 1;
+            let selectedAbility = null;
+            let lastBombScore = 0;
+            let hintTimeout = null;
+            
+            // Define color palettes for different moods (UI only)
+            const colorPalettes = [
+                {
+                    name: "Neon Pink",
+                    primary: "#ff00ff",
+                    secondary: "#9c27b0",
+                    bg: "linear-gradient(to bottom, #0a0015, #1a0033)",
+                    text: "#bb86fc"
+                },
+                {
+                    name: "Cyber Blue",
+                    primary: "#00ffff",
+                    secondary: "#03a9f4",
+                    bg: "linear-gradient(to bottom, #001533, #000d1a)",
+                    text: "#80deea"
+                }
+            ];
+            
+            let currentPalette = 0;
+            
+            // Define symbols for each tile type (more distinct)
+            const tileSymbols = ['✶', '♦', '●', '▲', '■', '🔄']; // Changed shuffle symbol to match ability
+            
+            // Initialize the game
+            function initGame() {
+                score = 0;
+                moves = 0;
+                level = 1;
+                xp = 0;
+                xpToNextLevel = 500;
+                bombCount = 1;
+                shuffleCount = 1;
+                hintCount = 1;
+                comboCount = 0;
+                comboMultiplier = 1;
+                selectedTile = null;
+                selectedAbility = null;
+                lastBombScore = 0;
+                board = [];
+                
+                updateDisplayStats();
+                updateDisplayMessage("WELCOME TO SUGAR HIGH!");
+                updateAbilityCharges();
+                
+                generateBoard();
+                renderBoard();
+                updateUIcolors();
+                
+                // Close modals if open
+                howToPlayModal.classList.remove('active');
+                gameOverModal.classList.remove('active');
+                
+                // Clear any active hints
+                clearHint();
+            }
+            
+            // Update display message with screen wipe effect
+            function updateDisplayMessage(message) {
+                dotMatrixDisplay.classList.remove('screen-wipe');
+                void dotMatrixDisplay.offsetWidth; // Trigger reflow
+                dotMatrixDisplay.classList.add('screen-wipe');
+                
+                setTimeout(() => {
+                    displayMessage.textContent = message;
+                }, 250);
+            }
+            
+            // Update display stats
+            function updateDisplayStats() {
+                displayScore.textContent = score;
+                displayMoves.textContent = moves;
+                displayLevel.textContent = level;
+            }
+            
+            // Update all ability charges visually
+            function updateAbilityCharges() {
+                // Update bomb charges
+                document.getElementById('bomb-charge-1').classList.toggle('active', bombCount >= 1);
+                document.getElementById('bomb-charge-2').classList.toggle('active', bombCount >= 2);
+                document.getElementById('bomb-charge-3').classList.toggle('active', bombCount >= 3);
+                
+                // Update shuffle charges
+                document.getElementById('shuffle-charge-1').classList.toggle('active', shuffleCount >= 1);
+                document.getElementById('shuffle-charge-2').classList.toggle('active', shuffleCount >= 2);
+                document.getElementById('shuffle-charge-3').classList.toggle('active', shuffleCount >= 3);
+                
+                // Update hint charges
+                document.getElementById('hint-charge-1').classList.toggle('active', hintCount >= 1);
+                document.getElementById('hint-charge-2').classList.toggle('active', hintCount >= 2);
+                document.getElementById('hint-charge-3').classList.toggle('active', hintCount >= 3);
+            }
+            
+            // Generate the game board with random tiles
+            function generateBoard() {
+                // Create a 2D array for the board
+                for (let row = 0; row < BOARD_SIZE; row++) {
+                    board[row] = [];
+                    for (let col = 0; col < BOARD_SIZE; col++) {
+                        // 5% chance for shuffle tile (type 6) - reduced from 7%
+                        const rand = Math.random();
+                        if (rand < 0.05) {
+                            board[row][col] = 6; // Shuffle tile
+                        } else {
+                            // Assign a random tile type (1-5)
+                            board[row][col] = Math.floor(Math.random() * TILE_TYPES) + 1;
+                        }
+                    }
+                }
+                
+                // Add 2-3 magic tiles instead of just 1
+                const magicTileCount = 2 + Math.floor(Math.random() * 2); // 2 or 3 magic tiles
+                for (let i = 0; i < magicTileCount; i++) {
+                    const magicCol = Math.floor(Math.random() * BOARD_SIZE);
+                    const magicRow = Math.floor(Math.random() * 3); // Place in top rows
+                    board[magicRow][magicCol] = {
+                        type: Math.floor(Math.random() * TILE_TYPES) + 1,
+                        isMagic: true
+                    };
+                }
+                
+                // Make sure there are no initial matches
+                while (findMatches().length > 0) {
+                    for (let match of findMatches()) {
+                        const {row, col} = match;
+                        board[row][col] = Math.floor(Math.random() * TILE_TYPES) + 1;
+                    }
+                }
+                
+                // Make sure there are possible moves
+                ensurePossibleMoves();
+            }
+            
+            // Ensure there are possible moves on the board
+            function ensurePossibleMoves() {
+                if (findPossibleMoves().length === 0) {
+                    // If no moves, regenerate the board
+                    generateBoard();
+                }
+            }
+            
+            // Render the game board
+            function renderBoard() {
+                gameBoard.innerHTML = '';
+                
+                for (let row = 0; row < BOARD_SIZE; row++) {
+                    for (let col = 0; col < BOARD_SIZE; col++) {
+                        const tile = document.createElement('div');
+                        let tileType = board[row][col];
+                        let isMagic = false;
+                        
+                        if (typeof tileType === 'object' && tileType.isMagic) {
+                            isMagic = true;
+                            tileType = tileType.type;
+                        }
+                        
+                        tile.className = `tile tile-${tileType}`;
+                        if (tileType === 6) {
+                            tile.classList.add('shuffle');
+                            tile.innerHTML = tileSymbols[5]; // Use the shuffle symbol
+                        } else if (isMagic) {
+                            tile.classList.add('magic');
+                            tile.innerHTML = '🔥'; // Black flame icon for magic tiles
+                            tile.style.color = 'black';
+                            tile.style.fontSize = '1.4rem';
+                        } else {
+                            tile.innerHTML = tileSymbols[tileType - 1];
+                        }
+                        
+                        tile.dataset.row = row;
+                        tile.dataset.col = col;
+                        tile.dataset.type = tileType;
+                        if (isMagic) tile.dataset.magic = "true";
+                        
+                        // Apply 3D effect with shadows
+                        tile.style.boxShadow += `, 0 0 8px ${getTileColor(tileType)}`;
+                        
+                        tile.addEventListener('click', () => {
+                            if (isProcessing) return;
+                            
+                            if (selectedAbility === 'bomb') {
+                                useBomb(row, col);
+                            } else {
+                                handleTileClick(row, col);
+                            }
+                        });
+                        
+                        gameBoard.appendChild(tile);
+                    }
+                }
+            }
+            
+            // Get the current color for a tile type (fixed to original colors)
+            function getTileColor(type) {
+                const originalColors = ['#ff00ff', '#00ffff', '#ffeb3b', '#76ff03', '#ff5252', '#ffffff'];
+                return originalColors[type - 1];
+            }
+            
+            // Update UI colors based on current palette
+            function updateUIcolors() {
+                const palette = colorPalettes[currentPalette];
+                
+                // Update UI elements
+                document.querySelector('.container').style.borderColor = palette.secondary;
+                document.querySelector('.container').style.boxShadow = 
+                    `0 0 15px ${palette.secondary}66, 0 0 30px rgba(33, 150, 243, 0.5)`;
+                
+                document.querySelectorAll('.btn').forEach(btn => {
+                    btn.style.background = `linear-gradient(to bottom, ${palette.secondary}, ${palette.primary})`;
+                    btn.style.boxShadow = 
+                        `0 3px 6px rgba(0, 0, 0, 0.3), 0 0 8px ${palette.secondary}66`;
+                });
+                
+                document.querySelector('.footer').style.color = palette.text;
+                
+                // Update vibe indicator
+                const vibeIndicator = document.querySelector('.vibe-indicator');
+                vibeIndicator.style.background = palette.primary;
+                vibeIndicator.style.boxShadow = `0 0 8px ${palette.primary}`;
+                
+                // Update background
+                document.body.style.background = palette.bg;
+            }
+            
+            // Show fireworks for level up
+            function showFireworks() {
+                for (let i = 0; i < level; i++) {
+                    setTimeout(() => {
+                        const firework = document.createElement('div');
+                        firework.className = 'firework';
+                        
+                        // Random direction and distance
+                        const angle = Math.random() * Math.PI * 2;
+                        const distance = 50 + Math.random() * 100;
+                        const tx = Math.cos(angle) * distance;
+                        const ty = Math.sin(angle) * distance;
+                        
+                        firework.style.setProperty('--tx', `${tx}px`);
+                        firework.style.setProperty('--ty', `${ty}px`);
+                        firework.style.animation = `firework 0.8s ease-out forwards`;
+                        firework.style.animationDelay = `${i * 0.2}s`;
+                        
+                        document.body.appendChild(firework);
+                        
+                        // Remove after animation
+                        setTimeout(() => {
+                            if (firework.parentNode) {
+                                document.body.removeChild(firework);
+                            }
+                        }, 1000 + (i * 200));
+                    }, i * 200);
+                }
+                
+                // Special message for high levels
+                if (level >= 10) {
+                    setTimeout(() => {
+                        updateDisplayMessage("CONGRATULATIONS! AMAZING!");
+                    }, 1000);
+                }
+            }
+            
+            // Update combo display
+            function updateComboDisplay() {
+                if (comboCount > 1) {
+                    updateDisplayMessage(`COMBO x${comboCount} (+${comboMultiplier}x XP)`);
+                }
+            }
+            
+            // Handle tile click
+            function handleTileClick(row, col) {
+                if (isSwapping || isProcessing) return;
+                
+                const clickedTile = {row, col};
+                
+                if (!selectedTile) {
+                    // First tile selection
+                    selectedTile = clickedTile;
+                    highlightTile(row, col, true);
+                } else {
+                    // Second tile selection
+                    if ((Math.abs(selectedTile.row - row) === 1 && selectedTile.col === col) ||
+                        (Math.abs(selectedTile.col - col) === 1 && selectedTile.row === row)) {
+                        // Tiles are adjacent, try to swap
+                        highlightTile(selectedTile.row, selectedTile.col, false);
+                        swapTiles(selectedTile, clickedTile);
+                    } else {
+                        // Tiles are not adjacent, deselect first and select new
+                        highlightTile(selectedTile.row, selectedTile.col, false);
+                        selectedTile = clickedTile;
+                        highlightTile(row, col, true);
+                    }
+                }
+            }
+            
+            // Highlight or unhighlight a tile
+            function highlightTile(row, col, isHighlighted) {
+                const tileElement = document.querySelector(`.tile[data-row="${row}"][data-col="${col}"]`);
+                if (isHighlighted) {
+                    tileElement.classList.add('selected');
+                } else {
+                    tileElement.classList.remove('selected');
+                }
+            }
+            
+            // Swap two tiles
+            function swapTiles(tile1, tile2) {
+                isSwapping = true;
+                
+                // Swap in the board array
+                const temp = board[tile1.row][tile1.col];
+                board[tile1.row][tile1.col] = board[tile2.row][tile2.col];
+                board[tile2.row][tile2.col] = temp;
+                
+                // Update the display
+                renderBoard();
+                
+                // Check for matches
+                setTimeout(() => {
+                    const matches = findMatches();
+                    
+                    if (matches.length > 0) {
+                        // Matches found, process them
+                        processMatches(matches);
+                        moves++;
+                        updateDisplayStats();
+                    } else {
+                        // No matches, swap back
+                        const temp = board[tile1.row][tile1.col];
+                        board[tile1.row][tile1.col] = board[tile2.row][tile2.col];
+                        board[tile2.row][tile2.col] = temp;
+                        renderBoard();
+                        comboCount = 0;
+                        comboMultiplier = 1;
+                    }
+                    
+                    selectedTile = null;
+                    isSwapping = false;
+                }, 400);
+            }
+            
+            // Find all matches on the board
+            function findMatches() {
+                const matches = [];
+                const processed = new Set();
+                
+                // Check horizontal matches
+                for (let row = 0; row < BOARD_SIZE; row++) {
+                    for (let col = 0; col < BOARD_SIZE - 2; col++) {
+                        let type1 = board[row][col];
+                        let type2 = board[row][col + 1];
+                        let type3 = board[row][col + 2];
+                        
+                        // Handle magic tiles
+                        if (typeof type1 === 'object') type1 = type1.type;
+                        if (typeof type2 === 'object') type2 = type2.type;
+                        if (typeof type3 === 'object') type3 = type3.type;
+                        
+                        if (type1 !== 0 && type1 === type2 && type1 === type3) {
+                            // Found a match of at least 3
+                            let matchLength = 3;
+                            while (col + matchLength < BOARD_SIZE) {
+                                let nextType = board[row][col + matchLength];
+                                if (typeof nextType === 'object') nextType = nextType.type;
+                                if (nextType === type1) {
+                                    matchLength++;
+                                } else {
+                                    break;
+                                }
+                            }
+                            
+                            // Add all tiles in the match
+                            for (let i = 0; i < matchLength; i++) {
+                                const key = `${row},${col + i}`;
+                                if (!processed.has(key)) {
+                                    matches.push({row, col: col + i});
+                                    processed.add(key);
+                                }
+                            }
+                            
+                            // Skip ahead
+                            col += matchLength - 1;
+                        }
+                    }
+                }
+                
+                // Check vertical matches
+                for (let col = 0; col < BOARD_SIZE; col++) {
+                    for (let row = 0; row < BOARD_SIZE - 2; row++) {
+                        let type1 = board[row][col];
+                        let type2 = board[row + 1][col];
+                        let type3 = board[row + 2][col];
+                        
+                        // Handle magic tiles
+                        if (typeof type1 === 'object') type1 = type1.type;
+                        if (typeof type2 === 'object') type2 = type2.type;
+                        if (typeof type3 === 'object') type3 = type3.type;
+                        
+                        if (type1 !== 0 && type1 === type2 && type1 === type3) {
+                            // Found a match of at least 3
+                            let matchLength = 3;
+                            while (row + matchLength < BOARD_SIZE) {
+                                let nextType = board[row + matchLength][col];
+                                if (typeof nextType === 'object') nextType = nextType.type;
+                                if (nextType === type1) {
+                                    matchLength++;
+                                } else {
+                                    break;
+                                }
+                            }
+                            
+                            // Add all tiles in the match
+                            for (let i = 0; i < matchLength; i++) {
+                                const key = `${row + i},${col}`;
+                                if (!processed.has(key)) {
+                                    matches.push({row: row + i, col});
+                                    processed.add(key);
+                                }
+                            }
+                            
+                            // Skip ahead
+                            row += matchLength - 1;
+                        }
+                    }
+                }
+                
+                return matches;
+            }
+            
+            // Check for special matches (5+ in a row or T/L shapes)
+            function checkSpecialMatches(matches) {
+                if (matches.length >= 5) {
+                    // Check if it's a straight line (not a T/L shape)
+                    const firstMatch = matches[0];
+                    let isHorizontal = true;
+                    let isVertical = true;
+                    
+                    for (let i = 1; i < matches.length; i++) {
+                        if (matches[i].row !== firstMatch.row) isHorizontal = false;
+                        if (matches[i].col !== firstMatch.col) isVertical = false;
+                    }
+                    
+                    // If it's a straight line of 5+, give a hint reward
+                    if ((isHorizontal || isVertical) && hintCount < 3) {
+                        hintCount++;
+                        updateAbilityCharges();
+                        updateDisplayMessage("HINT REWARD EARNED!");
+                    }
+                    
+                    // If it's a chain combo (multiple matches at once), give a shuffle reward
+                    if (matches.length >= 7 && shuffleCount < 3) {
+                        shuffleCount++;
+                        updateAbilityCharges();
+                        updateDisplayMessage("SHUFFLE REWARD EARNED!");
+                    }
+                }
+                
+                // Check for T or L shapes (simplified check)
+                if (matches.length >= 5) {
+                    const rows = new Set();
+                    const cols = new Set();
+                    
+                    for (const match of matches) {
+                        rows.add(match.row);
+                        cols.add(match.col);
+                    }
+                    
+                    // If it has at least 2 rows and 2 columns, it's likely a T/L shape
+                    if (rows.size >= 2 && cols.size >= 2 && hintCount < 3) {
+                        hintCount++;
+                        updateAbilityCharges();
+                        updateDisplayMessage("SPECIAL SHAPE BONUS!");
+                    }
+                }
+            }
+            
+            // Process matches and update the board
+            function processMatches(matches) {
+                isProcessing = true;
+                
+                // Increase combo
+                comboCount++;
+                comboMultiplier = Math.min(5, 1 + Math.floor(comboCount / 3));
+                updateComboDisplay();
+                
+                // Check for special matches and rewards
+                checkSpecialMatches(matches);
+                
+                // Check for shuffle tiles in matches
+                let hasShuffleTile = false;
+                for (const match of matches) {
+                    if (board[match.row][match.col] === 6) {
+                        hasShuffleTile = true;
+                        break;
+                    }
+                }
+                
+                if (hasShuffleTile && shuffleCount < 3) {
+                    shuffleCount++;
+                    updateAbilityCharges();
+                    updateDisplayMessage("SHUFFLE REWARD EARNED!");
+                }
+                
+                // Check for bomb reward (every 1500 points)
+                if (score - lastBombScore >= 1500 && bombCount < 3) {
+                    bombCount++;
+                    lastBombScore = score;
+                    updateAbilityCharges();
+                    updateDisplayMessage("BOMB REWARD EARNED!");
+                }
+                
+                // Highlight matched tiles
+                for (const match of matches) {
+                    const tileElement = document.querySelector(`.tile[data-row="${match.row}"][data-col="${match.col}"]`);
+                    if (tileElement) {
+                        tileElement.classList.add('matched');
+                    }
+                }
+                
+                // Update score and XP with multiplier
+                const points = matches.length * 10;
+                const xpGain = Math.floor(points * 0.5 * comboMultiplier);
+                score += points;
+                xp += xpGain;
+                updateDisplayStats();
+                
+                // Check for level up
+                if (xp >= xpToNextLevel) {
+                    level++;
+                    xp = xp - xpToNextLevel;
+                    xpToNextLevel = Math.floor(xpToNextLevel * 1.5);
+                    updateDisplayStats();
+                    updateDisplayMessage(`LEVEL UP! NOW LEVEL ${level}`);
+                    showFireworks();
+                }
+                
+                // Remove matched tiles after animation
+                setTimeout(() => {
+                    for (const match of matches) {
+                        board[match.row][match.col] = 0;
+                    }
+                    
+                    // Drop tiles from above
+                    dropTiles();
+                }, 800);
+            }
+            
+            // Make tiles drop down to fill empty spaces
+            function dropTiles() {
+                let magicTileTriggered = false;
+                
+                for (let col = 0; col < BOARD_SIZE; col++) {
+                    let emptySpaces = 0;
+                    
+                    for (let row = BOARD_SIZE - 1; row >= 0; row--) {
+                        if (board[row][col] === 0) {
+                            emptySpaces++;
+                        } else if (emptySpaces > 0) {
+                            // Check if it's a magic tile that reached the bottom
+                            if (row + emptySpaces === BOARD_SIZE - 1) {
+                                const tile = board[row][col];
+                                if (typeof tile === 'object' && tile.isMagic) {
+                                    // Magic tile reached the bottom - clear all tiles of its type with burn animation
+                                    const tileType = tile.type;
+                                    let burnTiles = [];
+                                    
+                                    for (let r = 0; r < BOARD_SIZE; r++) {
+                                        for (let c = 0; c < BOARD_SIZE; c++) {
+                                            let t = board[r][c];
+                                            let actualType = t;
+                                            if (typeof t === 'object') actualType = t.type;
+                                            if (actualType === tileType) {
+                                                burnTiles.push({row: r, col: c});
+                                            }
+                                        }
+                                    }
+                                    
+                                    // Add points for magic clear
+                                    score += burnTiles.length * 5;
+                                    updateDisplayStats();
+                                    updateDisplayMessage("MAGIC TILE ACTIVATED!");
+                                    
+                                    // Apply burn animation to all matching tiles
+                                    burnTiles.forEach(({row, col}) => {
+                                        const tileElement = document.querySelector(`.tile[data-row="${row}"][data-col="${col}"]`);
+                                        if (tileElement) {
+                                            tileElement.classList.add('burning');
+                                        }
+                                        board[row][col] = 0;
+                                    });
+                                    
+                                    magicTileTriggered = true;
+                                    
+                                    // Wait for burn animation to complete before continuing
+                                    setTimeout(() => {
+                                        dropTiles();
+                                        fillEmptySpaces();
+                                        renderBoard();
+                                        
+                                        // Check for matches after magic clear
+                                        setTimeout(() => {
+                                            const matches = findMatches();
+                                            if (matches.length > 0) {
+                                                processMatches(matches);
+                                            } else {
+                                                isProcessing = false;
+                                                comboCount = 0;
+                                                comboMultiplier = 1;
+                                                checkGameOver();
+                                            }
+                                        }, 500);
+                                    }, 1200);
+                                    
+                                    // Break out of the loop since we're handling this separately
+                                    return;
+                                }
+                            }
+                            
+                            board[row + emptySpaces][col] = board[row][col];
+                            board[row][col] = 0;
+                        }
+                    }
+                }
+                
+                // If no magic tile was triggered, continue normal processing
+                if (!magicTileTriggered) {
+                    fillEmptySpaces();
+                    renderBoard();
+                    
+                    // Check for matches
+                    setTimeout(() => {
+                        const matches = findMatches();
+                        if (matches.length > 0) {
+                            processMatches(matches);
+                        } else {
+                            isProcessing = false;
+                            comboCount = 0;
+                            comboMultiplier = 1;
+                            checkGameOver();
+                        }
+                    }, 500);
+                }
+            }
+            
+            // Fill empty spaces at the top with new tiles
+            function fillEmptySpaces() {
+                for (let col = 0; col < BOARD_SIZE; col++) {
+                    for (let row = 0; row < BOARD_SIZE; row++) {
+                        if (board[row][col] === 0) {
+                            // 5% chance for shuffle tile (reduced from 7%)
+                            const rand = Math.random();
+                            if (rand < 0.05) {
+                                board[row][col] = 6; // Shuffle tile
+                            } else {
+                                board[row][col] = Math.floor(Math.random() * TILE_TYPES) + 1;
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // Use bomb ability
+            function useBomb(row, col) {
+                if (bombCount <= 0) return;
+                
+                bombCount--;
+                updateAbilityCharges();
+                selectedAbility = null;
+                bombAbility.querySelector('.ability-icon').classList.remove('active');
+                
+                // Clear 3x3 area with burn animation
+                let bombTiles = [];
+                for (let r = Math.max(0, row - 1); r <= Math.min(BOARD_SIZE - 1, row + 1); r++) {
+                    for (let c = Math.max(0, col - 1); c <= Math.min(BOARD_SIZE - 1, col + 1); c++) {
+                        bombTiles.push({row: r, col: c});
+                    }
+                }
+                
+                // Apply burn animation to all bombed tiles
+                bombTiles.forEach(({row, col}) => {
+                    const tileElement = document.querySelector(`.tile[data-row="${row}"][data-col="${col}"]`);
+                    if (tileElement) {
+                        tileElement.classList.add('burning');
+                    }
+                    board[row][col] = 0;
+                });
+                
+                // Add points
+                score += 50;
+                updateDisplayStats();
+                updateDisplayMessage("BOOM! BOMB USED!");
+                
+                // Process the board after burn animation
+                setTimeout(() => {
+                    dropTiles();
+                }, 800);
+            }
+            
+            // Use shuffle ability
+            function useShuffle() {
+                if (shuffleCount <= 0) return;
+                
+                shuffleCount--;
+                updateAbilityCharges();
+                selectedAbility = null;
+                shuffleAbility.querySelector('.ability-icon').classList.remove('active');
+                
+                // Create a flat array of all tiles
+                let tiles = [];
+                for (let row = 0; row < BOARD_SIZE; row++) {
+                    for (let col = 0; col < BOARD_SIZE; col++) {
+                        tiles.push(board[row][col]);
+                    }
+                }
+                
+                // Shuffle the array
+                for (let i = tiles.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [tiles[i], tiles[j]] = [tiles[j], tiles[i]];
+                }
+                
+                // Put back into board
+                let index = 0;
+                for (let row = 0; row < BOARD_SIZE; row++) {
+                    for (let col = 0; col < BOARD_SIZE; col++) {
+                        board[row][col] = tiles[index++];
+                    }
+                }
+                
+                renderBoard();
+                updateDisplayMessage("BOARD SHUFFLED!");
+                
+                // Check for matches
+                setTimeout(() => {
+                    const matches = findMatches();
+                    if (matches.length > 0) {
+                        processMatches(matches);
+                    } else {
+                        checkGameOver();
+                    }
+                }, 500);
+            }
+            
+            // Use hint ability - finds the best move (largest match)
+            function useHint() {
+                if (hintCount <= 0) return;
+                
+                hintCount--;
+                updateAbilityCharges();
+                selectedAbility = null;
+                hintAbility.querySelector('.ability-icon').classList.remove('active');
+                
+                // Find all possible moves
+                const possibleMoves = findPossibleMoves();
+                if (possibleMoves.length > 0) {
+                    // Find the move that creates the largest match
+                    let bestMove = null;
+                    let bestMatchSize = 0;
+                    
+                    for (const move of possibleMoves) {
+                        // Swap tiles temporarily
+                        const {row, col, direction} = move;
+                        let temp;
+                        
+                        if (direction === 'right') {
+                            temp = board[row][col];
+                            board[row][col] = board[row][col + 1];
+                            board[row][col + 1] = temp;
+                        } else if (direction === 'down') {
+                            temp = board[row][col];
+                            board[row][col] = board[row + 1][col];
+                            board[row + 1][col] = temp;
+                        }
+                        
+                        // Check match size
+                        const matches = findMatches();
+                        let matchSize = matches.length;
+                        
+                        // Swap back
+                        if (direction === 'right') {
+                            temp = board[row][col];
+                            board[row][col] = board[row][col + 1];
+                            board[row][col + 1] = temp;
+                        } else if (direction === 'down') {
+                            temp = board[row][col];
+                            board[row][col] = board[row + 1][col];
+                            board[row + 1][col] = temp;
+                        }
+                        
+                        if (matchSize > bestMatchSize) {
+                            bestMatchSize = matchSize;
+                            bestMove = move;
+                        }
+                    }
+                    
+                    // Highlight the best move
+                    if (bestMove) {
+                        const {row, col} = bestMove;
+                        const tileElement = document.querySelector(`.tile[data-row="${row}"][data-col="${col}"]`);
+                        if (tileElement) {
+                            tileElement.classList.add('hint');
+                            updateDisplayMessage("HINT: BEST MOVE HIGHLIGHTED!");
+                            
+                            // Remove hint after 5 seconds
+                            hintTimeout = setTimeout(() => {
+                                clearHint();
+                            }, 5000);
+                        }
+                    }
+                } else {
+                    updateDisplayMessage("NO POSSIBLE MOVES FOUND!");
+                }
+            }
+            
+            // Clear hint highlighting
+            function clearHint() {
+                if (hintTimeout) {
+                    clearTimeout(hintTimeout);
+                    hintTimeout = null;
+                }
+                
+                document.querySelectorAll('.tile.hint').forEach(tile => {
+                    tile.classList.remove('hint');
+                });
+            }
+            
+            // Find possible moves on the board
+            function findPossibleMoves() {
+                const possibleMoves = [];
+                
+                // Check all possible swaps
+                for (let row = 0; row < BOARD_SIZE; row++) {
+                    for (let col = 0; col < BOARD_SIZE; col++) {
+                        // Check right neighbor
+                        if (col < BOARD_SIZE - 1) {
+                            // Swap tiles
+                            const temp = board[row][col];
+                            board[row][col] = board[row][col + 1];
+                            board[row][col + 1] = temp;
+                            
+                            // Check if this creates a match
+                            if (findMatches().length > 0) {
+                                possibleMoves.push({row, col, direction: 'right'});
+                            }
+                            
+                            // Swap back
+                            board[row][col + 1] = board[row][col];
+                            board[row][col] = temp;
+                        }
+                        
+                        // Check bottom neighbor
+                        if (row < BOARD_SIZE - 1) {
+                            // Swap tiles
+                            const temp = board[row][col];
+                            board[row][col] = board[row + 1][col];
+                            board[row + 1][col] = temp;
+                            
+                            // Check if this creates a match
+                            if (findMatches().length > 0) {
+                                possibleMoves.push({row, col, direction: 'down'});
+                            }
+                            
+                            // Swap back
+                            board[row + 1][col] = board[row][col];
+                            board[row][col] = temp;
+                        }
+                    }
+                }
+                
+                return possibleMoves;
+            }
+            
+            // Check if game is over
+            function checkGameOver() {
+                const possibleMoves = findPossibleMoves();
+                
+                if (possibleMoves.length === 0) {
+                    if (bombCount === 0 && shuffleCount === 0 && hintCount === 0) {
+                        // Game over
+                        finalScoreElement.textContent = score;
+                        finalLevelElement.textContent = level;
+                        gameOverModal.classList.add('active');
+                        updateDisplayMessage("GAME OVER! NO MORE MOVES!");
+                    } else {
+                        updateDisplayMessage("NO MOVES! USE YOUR ABILITIES!");
+                    }
+                }
+            }
+            
+            // Change color palette (UI only)
+            function changePalette() {
+                currentPalette = (currentPalette + 1) % colorPalettes.length;
+                updateUIcolors();
+                updateDisplayMessage("MOOD CHANGED!");
+            }
+            
+            // Initialize the game
+            initGame();
+            
+            // Add event listeners for buttons
+            newGameBtn.addEventListener('click', initGame);
+            changeMoodBtn.addEventListener('click', changePalette);
+            helpBtn.addEventListener('click', () => {
+                howToPlayModal.classList.add('active');
+            });
+            restartBtn.addEventListener('click', initGame);
+            
+            closeModalButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    howToPlayModal.classList.remove('active');
+                    gameOverModal.classList.remove('active');
+                });
+            });
+            
+            // Add event listeners for abilities
+            bombAbility.addEventListener('click', function() {
+                if (bombCount > 0) {
+                    selectedAbility = selectedAbility === 'bomb' ? null : 'bomb';
+                    this.querySelector('.ability-icon').classList.toggle('active');
+                    
+                    if (selectedAbility === 'bomb') {
+                        shuffleAbility.querySelector('.ability-icon').classList.remove('active');
+                        hintAbility.querySelector('.ability-icon').classList.remove('active');
+                        updateDisplayMessage("BOMB SELECTED! CLICK A TILE!");
+                    } else {
+                        updateDisplayMessage("ABILITY DESELECTED");
+                    }
+                }
+            });
+            
+            shuffleAbility.addEventListener('click', function() {
+                if (shuffleCount > 0) {
+                    useShuffle();
+                    bombAbility.querySelector('.ability-icon').classList.remove('active');
+                    hintAbility.querySelector('.ability-icon').classList.remove('active');
+                    selectedAbility = null;
+                }
+            });
+            
+            hintAbility.addEventListener('click', function() {
+                if (hintCount > 0) {
+                    selectedAbility = selectedAbility === 'hint' ? null : 'hint';
+                    this.querySelector('.ability-icon').classList.toggle('active');
+                    
+                    if (selectedAbility === 'hint') {
+                        bombAbility.querySelector('.ability-icon').classList.remove('active');
+                        shuffleAbility.querySelector('.ability-icon').classList.remove('active');
+                        useHint();
+                    } else {
+                        clearHint();
+                        updateDisplayMessage("ABILITY DESELECTED");
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>

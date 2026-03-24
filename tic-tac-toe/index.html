@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Neon Tic-Tac-Toe | 80s Edition</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Arial', sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+            transition: background 0.5s ease;
+            perspective: 1000px;
+            overflow: hidden;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 1rem;
+            flex-shrink: 0;
+        }
+        
+        h1 {
+            font-size: 2.2rem;
+            margin-bottom: 0.3rem;
+            background: linear-gradient(45deg, #ff00ff, #00ffff);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            text-shadow: 0 0 15px rgba(255, 0, 255, 0.7);
+            animation: titleGlow 2s infinite alternate;
+            transform: translateZ(20px);
+        }
+        
+        @keyframes titleGlow {
+            from { text-shadow: 0 0 10px rgba(255, 0, 255, 0.7), 0 0 20px rgba(255, 0, 255, 0.5); }
+            to { text-shadow: 0 0 15px rgba(0, 255, 255, 0.7), 0 0 30px rgba(0, 255, 255, 0.5); }
+        }
+        
+        .game-container {
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 1.2rem;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.3),
+                        0 8px 20px rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            max-width: 400px;
+            width: 100%;
+            transform-style: preserve-3d;
+            transform: translateZ(10px);
+            flex-shrink: 0;
+        }
+        
+        .status {
+            text-align: center;
+            margin-bottom: 0.8rem;
+            font-size: 1.1rem;
+            height: 1.5rem;
+            color: #00ffff;
+            text-shadow: 0 0 8px rgba(0, 255, 255, 0.7);
+            transition: all 0.5s ease;
+            font-weight: bold;
+            transform: translateZ(15px);
+        }
+        
+        .difficulty {
+            margin: 0.8rem 0;
+            text-align: center;
+            transform: translateZ(15px);
+            font-size: 0.9rem;
+        }
+        
+        select {
+            background: rgba(0, 0, 0, 0.3);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 0.4rem 0.6rem;
+            border-radius: 6px;
+            margin-left: 0.3rem;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+            transform: translateZ(5px);
+            font-size: 0.8rem;
+        }
+        
+        .game-board {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-gap: 8px;
+            margin-bottom: 1.2rem;
+            transform-style: preserve-3d;
+            transform: rotateX(5deg) translateZ(15px);
+        }
+        
+        .cell {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            position: relative;
+            transform-style: preserve-3d;
+            transform: translateZ(0);
+        }
+        
+        .cell::after {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 6px;
+            bottom: -3px;
+            left: 0;
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 0 0 8px 8px;
+            transform: skewX(45deg) scaleY(0.7);
+            transform-origin: bottom;
+            filter: blur(3px);
+            z-index: -1;
+        }
+        
+        .cell:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateY(-3px) translateZ(8px);
+            box-shadow: 0 5px 12px rgba(0, 0, 0, 0.4),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.15);
+        }
+        
+        .cell.x {
+            color: #ff00ff;
+            text-shadow: 0 0 10px rgba(255, 0, 255, 0.8);
+            animation: xPulse 2s infinite alternate;
+            position: relative;
+        }
+        
+        .cell.x::before {
+            content: 'X';
+            position: absolute;
+            color: rgba(255, 0, 255, 0.2);
+            z-index: -1;
+            transform: translateZ(-8px);
+            text-shadow: none;
+        }
+        
+        @keyframes xPulse {
+            from { text-shadow: 0 0 8px rgba(255, 0, 255, 0.7); }
+            to { text-shadow: 0 0 15px rgba(255, 0, 255, 0.9), 0 0 20px rgba(255, 0, 255, 0.6); }
+        }
+        
+        .cell.o {
+            color: #00ffff;
+            text-shadow: 0 0 10px rgba(0, 255, 255, 0.8);
+            animation: oPulse 2s infinite alternate;
+            position: relative;
+        }
+        
+        .cell.o::before {
+            content: 'O';
+            position: absolute;
+            color: rgba(0, 255, 255, 0.2);
+            z-index: -1;
+            transform: translateZ(-8px);
+            text-shadow: none;
+        }
+        
+        @keyframes oPulse {
+            from { text-shadow: 0 0 8px rgba(0, 255, 255, 0.7); }
+            to { text-shadow: 0 0 15px rgba(0, 255, 255, 0.9), 0 0 20px rgba(0, 255, 255, 0.6); }
+        }
+        
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 0.8rem;
+            flex-wrap: wrap;
+            margin-bottom: 1rem;
+            transform: translateZ(12px);
+        }
+        
+        button {
+            background: linear-gradient(45deg, #ff00ff, #00ffff);
+            border: none;
+            padding: 0.6rem 1rem;
+            border-radius: 30px;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 3px 10px rgba(0, 255, 255, 0.4),
+                        0 1px 3px rgba(0, 0, 0, 0.3);
+            position: relative;
+            overflow: hidden;
+            transform-style: preserve-3d;
+            transform: translateZ(0);
+            font-size: 0.8rem;
+        }
+        
+        button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: 0.5s;
+        }
+        
+        button:hover::before {
+            left: 100%;
+        }
+        
+        button:hover {
+            transform: translateY(-2px) translateZ(4px);
+            box-shadow: 0 5px 15px rgba(0, 255, 255, 0.6),
+                        0 2px 6px rgba(0, 0, 0, 0.4);
+        }
+        
+        button:active {
+            transform: translateY(1px) translateZ(0);
+            box-shadow: 0 1px 5px rgba(0, 255, 255, 0.3),
+                        0 1px 2px rgba(0, 0, 0, 0.3);
+        }
+        
+        #moodButton {
+            background: linear-gradient(45deg, #ff00ff, #ff9900, #00ffff);
+            background-size: 200% 200%;
+            animation: gradientShift 3s infinite alternate;
+        }
+        
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            100% { background-position: 100% 50%; }
+        }
+        
+        .score-board {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 1rem;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 0.8rem;
+            border-radius: 10px;
+            width: 100%;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            transform: translateZ(8px);
+        }
+        
+        .score {
+            text-align: center;
+            position: relative;
+            padding: 0 0.6rem;
+            font-size: 0.8rem;
+        }
+        
+        .score::after {
+            content: '';
+            position: absolute;
+            right: 0;
+            top: 10%;
+            height: 80%;
+            width: 1px;
+            background: linear-gradient(to bottom, transparent, rgba(255, 255, 255, 0.2), transparent);
+        }
+        
+        .score:last-child::after {
+            display: none;
+        }
+        
+        .score-value {
+            font-size: 1.4rem;
+            font-weight: bold;
+            color: #00ffff;
+            text-shadow: 0 0 8px rgba(0, 255, 255, 0.7);
+            transition: all 0.5s ease;
+            margin-top: 0.3rem;
+            display: inline-block;
+            min-width: 30px;
+            transform: translateZ(4px);
+        }
+        
+        footer {
+            margin-top: 1rem;
+            text-align: center;
+            color: rgba(255, 255, 255, 0.5);
+            transform: translateZ(8px);
+            font-size: 0.7rem;
+            flex-shrink: 0;
+        }
+        
+        @media (max-height: 700px) {
+            h1 {
+                font-size: 1.8rem;
+            }
+            
+            .game-container {
+                padding: 0.8rem;
+                max-width: 340px;
+            }
+            
+            .cell {
+                font-size: 2rem;
+            }
+            
+            .status {
+                font-size: 1rem;
+                margin-bottom: 0.5rem;
+            }
+            
+            .score-value {
+                font-size: 1.2rem;
+            }
+            
+            footer {
+                margin-top: 0.5rem;
+            }
+        }
+        
+        @media (max-width: 400px) {
+            h1 {
+                font-size: 1.6rem;
+            }
+            
+            .game-container {
+                padding: 0.6rem;
+            }
+            
+            .cell {
+                font-size: 1.8rem;
+            }
+            
+            button {
+                padding: 0.5rem 0.8rem;
+                font-size: 0.7rem;
+            }
+            
+            .score {
+                font-size: 0.7rem;
+            }
+            
+            .score-value {
+                font-size: 1.1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>3D Neon Tic-Tac-Toe</h1>
+        <p>80s Style - Get three in a row to win!</p>
+    </header>
+    
+    <div class="game-container">
+        <div class="status" id="status">Your turn (X)</div>
+        
+        <div class="difficulty">
+            <label for="aiDifficulty">AI Difficulty:</label>
+            <select id="aiDifficulty">
+                <option value="easy">Easy</option>
+                <option value="medium" selected>Medium</option>
+                <option value="hard">Hard</option>
+            </select>
+        </div>
+        
+        <div class="game-board" id="gameBoard">
+            <div class="cell" data-cell-index="0"></div>
+            <div class="cell" data-cell-index="1"></div>
+            <div class="cell" data-cell-index="2"></div>
+            <div class="cell" data-cell-index="3"></div>
+            <div class="cell" data-cell-index="4"></div>
+            <div class="cell" data-cell-index="5"></div>
+            <div class="cell" data-cell-index="6"></div>
+            <div class="cell" data-cell-index="7"></div>
+            <div class="cell" data-cell-index="8"></div>
+        </div>
+        
+        <div class="controls">
+            <button id="restartBtn">Restart</button>
+            <button id="moodButton">Change Mood</button>
+            <button id="newGameBtn">New Game</button>
+        </div>
+        
+        <div class="score-board">
+            <div class="score">
+                <div>Player X</div>
+                <div class="score-value" id="playerXScore">0</div>
+            </div>
+            <div class="score">
+                <div>Draws</div>
+                <div class="score-value" id="drawScore">0</div>
+            </div>
+            <div class="score">
+                <div>Player O</div>
+                <div class="score-value" id="playerOScore">0</div>
+            </div>
+        </div>
+    </div>
+    
+    <footer>
+        <p>Created with AI assistance | Game Hub Project | 2025 Edition</p>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Game state variables
+            let currentPlayer = 'X';
+            let gameBoard = ['', '', '', '', '', '', '', '', ''];
+            let gameActive = true;
+            let scores = {
+                X: 0,
+                O: 0,
+                draw: 0
+            };
+            
+            // Color themes for mood changes
+            const colorThemes = [
+                { x: '#ff00ff', o: '#00ffff', bg: 'linear-gradient(135deg, #1a1a2e, #16213e)' }, // Original
+                { x: '#ff9900', o: '#9900ff', bg: 'linear-gradient(135deg, #2e1a2e, #2e162e)' }, // Purple/Orange
+                { x: '#00ff99', o: '#ff0066', bg: 'linear-gradient(135deg, #1a2e2e, #162e2e)' }, // Green/Pink
+                { x: '#ffff00', o: '#ff00ff', bg: 'linear-gradient(135deg, #2e2e1a, #2e2e16)' }, // Yellow/Magenta
+                { x: '#00ffff', o: '#ff9900', bg: 'linear-gradient(135deg, #1a2e1a, #162e16)' }  // Cyan/Orange
+            ];
+            
+            // Winning combinations
+            const winningConditions = [
+                [0, 1, 2], [3, 4, 5], [6, 7, 8], // rows
+                [0, 3, 6], [1, 4, 7], [2, 5, 8], // columns
+                [0, 4, 8], [2, 4, 6]             // diagonals
+            ];
+            
+            // DOM elements
+            const statusDisplay = document.getElementById('status');
+            const cells = document.querySelectorAll('.cell');
+            const restartBtn = document.getElementById('restartBtn');
+            const newGameBtn = document.getElementById('newGameBtn');
+            const moodButton = document.getElementById('moodButton');
+            const playerXScoreElem = document.getElementById('playerXScore');
+            const playerOScoreElem = document.getElementById('playerOScore');
+            const drawScoreElem = document.getElementById('drawScore');
+            const aiDifficultySelect = document.getElementById('aiDifficulty');
+            
+            // Messages
+            const winMessage = () => `Player ${currentPlayer} has won!`;
+            const drawMessage = () => `Game ended in a draw!`;
+            const currentPlayerTurn = () => currentPlayer === 'X' ? 'Your turn (X)' : 'AI\'s turn (O)';
+            
+            // Set status display
+            statusDisplay.innerHTML = currentPlayerTurn();
+            
+            // Handle cell click
+            function handleCellClick(clickedCellEvent) {
+                const clickedCell = clickedCellEvent.target;
+                const clickedCellIndex = parseInt(clickedCell.getAttribute('data-cell-index'));
+                
+                // Check if cell already played or game not active
+                if (gameBoard[clickedCellIndex] !== '' || !gameActive || currentPlayer === 'O') {
+                    return;
+                }
+                
+                // Process the move
+                processMove(clickedCellIndex, clickedCell);
+                
+                // Check if game is still active after player's move
+                if (gameActive && currentPlayer === 'O') {
+                    // AI makes a move after a short delay
+                    setTimeout(makeAIMove, 600);
+                }
+            }
+            
+            // Process a move
+            function processMove(cellIndex, cellElement) {
+                gameBoard[cellIndex] = currentPlayer;
+                if (cellElement) {
+                    cellElement.innerHTML = currentPlayer;
+                    cellElement.classList.add(currentPlayer.toLowerCase());
+                }
+                
+                // Check for win or draw
+                if (checkWin()) {
+                    gameActive = false;
+                    statusDisplay.innerHTML = winMessage();
+                    scores[currentPlayer]++;
+                    updateScores();
+                    return;
+                }
+                
+                if (checkDraw()) {
+                    gameActive = false;
+                    statusDisplay.innerHTML = drawMessage();
+                    scores.draw++;
+                    updateScores();
+                    return;
+                }
+                
+                // Switch player
+                currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+                statusDisplay.innerHTML = currentPlayerTurn();
+            }
+            
+            // AI move logic
+            function makeAIMove() {
+                if (!gameActive || currentPlayer !== 'O') return;
+                
+                const difficulty = aiDifficultySelect.value;
+                let moveIndex;
+                
+                if (difficulty === 'easy') {
+                    // Easy: random move
+                    moveIndex = getRandomMove();
+                } else if (difficulty === 'medium') {
+                    // Medium: 50% chance to make a smart move, 50% random
+                    moveIndex = Math.random() > 0.5 ? getSmartMove() : getRandomMove();
+                } else {
+                    // Hard: always make a smart move
+                    moveIndex = getSmartMove();
+                }
+                
+                const cellElement = document.querySelector(`[data-cell-index="${moveIndex}"]`);
+                processMove(moveIndex, cellElement);
+            }
+            
+            // Get a random available move
+            function getRandomMove() {
+                const availableMoves = gameBoard
+                    .map((cell, index) => cell === '' ? index : null)
+                    .filter(index => index !== null);
+                
+                return availableMoves[Math.floor(Math.random() * availableMoves.length)];
+            }
+            
+            // Get a smart move (try to win or block player)
+            function getSmartMove() {
+                // First, check if AI can win
+                for (let i = 0; i < winningConditions.length; i++) {
+                    const [a, b, c] = winningConditions[i];
+                    if (gameBoard[a] === 'O' && gameBoard[b] === 'O' && gameBoard[c] === '') return c;
+                    if (gameBoard[a] === 'O' && gameBoard[c] === 'O' && gameBoard[b] === '') return b;
+                    if (gameBoard[b] === 'O' && gameBoard[c] === 'O' && gameBoard[a] === '') return a;
+                }
+                
+                // Then, check if need to block player
+                for (let i = 0; i < winningConditions.length; i++) {
+                    const [a, b, c] = winningConditions[i];
+                    if (gameBoard[a] === 'X' && gameBoard[b] === 'X' && gameBoard[c] === '') return c;
+                    if (gameBoard[a] === 'X' && gameBoard[c] === 'X' && gameBoard[b] === '') return b;
+                    if (gameBoard[b] === 'X' && gameBoard[c] === 'X' && gameBoard[a] === '') return a;
+                }
+                
+                // Then try to take center
+                if (gameBoard[4] === '') return 4;
+                
+                // Otherwise, random move
+                return getRandomMove();
+            }
+            
+            // Check for win
+            function checkWin() {
+                for (let i = 0; i < winningConditions.length; i++) {
+                    const [a, b, c] = winningConditions[i];
+                    if (gameBoard[a] && gameBoard[a] === gameBoard[b] && gameBoard[a] === gameBoard[c]) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+            
+            // Check for draw
+            function checkDraw() {
+                return !gameBoard.includes('');
+            }
+            
+            // Restart game
+            function restartGame() {
+                gameBoard = ['', '', '', '', '', '', '', '', ''];
+                gameActive = true;
+                currentPlayer = 'X';
+                statusDisplay.innerHTML = currentPlayerTurn();
+                
+                cells.forEach(cell => {
+                    cell.innerHTML = '';
+                    cell.classList.remove('x', 'o');
+                });
+            }
+            
+            // New game (reset scores too)
+            function newGame() {
+                scores.X = 0;
+                scores.O = 0;
+                scores.draw = 0;
+                updateScores();
+                restartGame();
+            }
+            
+            // Update score display
+            function updateScores() {
+                playerXScoreElem.textContent = scores.X;
+                playerOScoreElem.textContent = scores.O;
+                drawScoreElem.textContent = scores.draw;
+            }
+            
+            // Change color theme
+            function changeMood() {
+                const randomTheme = colorThemes[Math.floor(Math.random() * colorThemes.length)];
+                
+                // Update CSS variables
+                document.documentElement.style.setProperty('--x-color', randomTheme.x);
+                document.documentElement.style.setProperty('--o-color', randomTheme.o);
+                
+                // Update body background
+                document.body.style.background = randomTheme.bg;
+                
+                // Update status and score colors
+                statusDisplay.style.color = randomTheme.x;
+                statusDisplay.style.textShadow = `0 0 8px ${randomTheme.x}80`;
+                
+                document.querySelectorAll('.score-value').forEach(el => {
+                    el.style.color = randomTheme.o;
+                    el.style.textShadow = `0 0 8px ${randomTheme.o}80`;
+                });
+                
+                // Update X and O colors
+                document.querySelectorAll('.cell.x').forEach(cell => {
+                    cell.style.color = randomTheme.x;
+                    cell.style.textShadow = `0 0 12px ${randomTheme.x}CC`;
+                });
+                
+                document.querySelectorAll('.cell.o').forEach(cell => {
+                    cell.style.color = randomTheme.o;
+                    cell.style.textShadow = `0 0 12px ${randomTheme.o}CC`;
+                });
+            }
+            
+            // Add event listeners
+            cells.forEach(cell => cell.addEventListener('click', handleCellClick));
+            restartBtn.addEventListener('click', restartGame);
+            newGameBtn.addEventListener('click', newGame);
+            moodButton.addEventListener('click', changeMood);
+            
+            // Initialize with a random theme
+            changeMood();
+        });
+    </script>
+</body>
+</html>
