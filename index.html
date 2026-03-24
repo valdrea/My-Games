@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VALDREA GAME TERMINAL</title>
+    <style>
+        body {
+            background-color: #0a0a0a;
+            color: #00ff41;
+            font-family: 'Courier New', Courier, monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 50px;
+            text-shadow: 0 0 5px #00ff41;
+        }
+        .terminal-box {
+            border: 2px solid #00ff41;
+            padding: 20px;
+            width: 80%;
+            max-width: 600px;
+            box-shadow: 0 0 15px rgba(0, 255, 65, 0.2);
+        }
+        h1 { font-size: 1.5rem; border-bottom: 1px solid #00ff41; padding-bottom: 10px; }
+        ul { list-style: none; padding: 0; }
+        li { margin: 15px 0; }
+        a {
+            color: #00ff41;
+            text-decoration: none;
+            font-weight: bold;
+            display: block;
+            padding: 10px;
+            border: 1px transparent;
+        }
+        a:hover {
+            background-color: #00ff41;
+            color: #0a0a0a;
+        }
+        .cursor { animation: blink 1s infinite; }
+        @keyframes blink { 50% { opacity: 0; } }
+    </style>
+</head>
+<body>
+
+    <div class="terminal-box">
+        <h1>> SYSTEM: GAME_LIBRARY_ROOT</h1>
+        <p>Select a protocol to initialize:</p>
+        
+        <ul>
+            <li>
+                <a href="void protocol/index.html">[ RUN ] - VOID PROTOCOL</a>
+            </li>
+            
+            <li>
+                <a href="#">[ RUN ] - COMING SOON...</a>
+            </li>
+        </ul>
+
+        <p>> <span class="cursor">_</span></p>
+    </div>
+
+</body>
+</html>
