@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quest of the Eternal Path</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=UnifrakturCook:wght@700&family=Press+Start+2P&display=swap');
+
+        :root {
+            --fantasy-gold: #f4c542;
+            --forest-green: #0a3d2b;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(#1a2f1f, #0f1f14);
+            color: #e8d5a3;
+            font-family: 'Press Start 2P', system-ui;
+            overflow: hidden;
+            image-rendering: pixelated;
+        }
+
+        #game-container {
+            display: flex;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            gap: 20px;
+            height: 100vh;
+            align-items: center;
+        }
+
+        #sidebar {
+            width: 280px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .player-panel {
+            background: rgba(10, 61, 43, 0.95);
+            border: 6px solid var(--fantasy-gold);
+            border-radius: 12px;
+            padding: 16px;
+            box-shadow: 0 0 30px rgba(244, 197, 66, 0.6);
+        }
+
+        .player-header {
+            font-family: 'UnifrakturCook', cursive;
+            font-size: 24px;
+            text-align: center;
+            margin-bottom: 12px;
+            text-shadow: 3px 3px 0 #000;
+        }
+
+        .player-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            font-size: 14px;
+        }
+
+        .stat {
+            background: rgba(0,0,0,0.4);
+            padding: 8px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .stat-emoji {
+            font-size: 20px;
+        }
+
+        .hp-bar-container {
+            height: 12px;
+            background: #222;
+            border: 2px solid #f44;
+            border-radius: 6px;
+            overflow: hidden;
+            margin-top: 6px;
+        }
+
+        .hp-bar {
+            height: 100%;
+            background: linear-gradient(#f44, #ff0);
+            transition: width 0.6s ease;
+        }
+
+        #board-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+        }
+
+        canvas {
+            border: 12px solid var(--fantasy-gold);
+            border-radius: 16px;
+            box-shadow: 0 0 40px rgba(244, 197, 66, 0.8),
+                        inset 0 0 30px rgba(255,255,255,0.2);
+            background: #0a3d2b;
+        }
+
+        #controls {
+            background: rgba(10, 61, 43, 0.95);
+            border: 6px solid var(--fantasy-gold);
+            border-radius: 12px;
+            padding: 16px;
+            width: 100%;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+        }
+
+        #roll-button {
+            background: #c0392b;
+            color: white;
+            font-family: 'Press Start 2P';
+            font-size: 22px;
+            padding: 16px 32px;
+            border: 6px solid #f4c542;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 8px 0 #000;
+        }
+
+        #roll-button:active {
+            transform: translateY(4px);
+            box-shadow: 0 4px 0 #000;
+        }
+
+        #roll-button:disabled {
+            background: #555;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        #dice-display {
+            font-size: 120px;
+            line-height: 1;
+            min-height: 140px;
+            text-shadow: 6px 6px 0 #000;
+            transition: transform 0.1s;
+        }
+
+        #turn-indicator {
+            font-family: 'UnifrakturCook', cursive;
+            font-size: 28px;
+            text-shadow: 4px 4px 0 #000;
+            margin: 8px 0;
+        }
+
+        #log-panel {
+            width: 320px;
+            background: rgba(10, 61, 43, 0.95);
+            border: 6px solid var(--fantasy-gold);
+            border-radius: 12px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #event-log {
+            flex: 1;
+            background: #111;
+            border: 4px inset #f4c542;
+            padding: 12px;
+            overflow-y: auto;
+            font-size: 13px;
+            line-height: 1.4;
+            color: #aaa;
+        }
+
+        .log-entry {
+            margin-bottom: 8px;
+            padding-bottom: 8px;
+            border-bottom: 1px dashed #444;
+        }
+
+        #event-popup {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #0f1f14;
+            border: 10px solid #f4c542;
+            border-radius: 20px;
+            width: 420px;
+            padding: 30px;
+            box-shadow: 0 0 60px #f4c542;
+            text-align: center;
+            z-index: 1000;
+            display: none;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        #event-popup h2 {
+            font-family: 'UnifrakturCook', cursive;
+            font-size: 28px;
+            color: #f4c542;
+            text-shadow: 3px 3px #000;
+        }
+
+        #event-desc {
+            font-size: 18px;
+            line-height: 1.3;
+            min-height: 80px;
+        }
+
+        #event-changes {
+            background: rgba(0,0,0,0.6);
+            padding: 14px;
+            border-radius: 8px;
+            text-align: left;
+            font-size: 15px;
+        }
+
+        #popup-close {
+            background: #c0392b;
+            color: white;
+            font-size: 18px;
+            padding: 12px 40px;
+            border: 4px solid #f4c542;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        #victory-screen {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.92);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            font-family: 'UnifrakturCook', cursive;
+        }
+
+        #victory-screen h1 {
+            font-size: 64px;
+            color: #f4c542;
+            text-shadow: 8px 8px 0 #000;
+            margin-bottom: 20px;
+        }
+
+        .final-stats {
+            display: flex;
+            gap: 60px;
+            margin: 30px 0;
+        }
+
+        .winner-badge {
+            position: absolute;
+            top: 80px;
+            font-size: 42px;
+            background: #c0392b;
+            padding: 10px 40px;
+            transform: rotate(-12deg);
+            border: 8px solid gold;
+        }
+    </style>
+</head>
+<body>
+    <!-- 
+    ASSET REQUIREMENTS LIST (for commercial polish):
+    
+    IMAGES / SPRITES:
+    - 25 unique tile sprites (PNG 64×64): forest path, stone ruins, river crossing, mountain pass, enchanted tree, dragon cave, tavern, etc.
+    - Player 1 pawn sprite sheet (32×32 × 8 frames): human knight walking + idle
+    - Player 2 pawn sprite sheet (32×32 × 8 frames): orc warrior
+    - Dice roll animation sprite sheet (6 faces + rolling blur) or 6 separate 128×128 dice PNGs
+    - 20 event icons (32×32 PNG): chest, healing spring, goblin, fairy, swamp hag, troll, mimic, etc.
+    - Background parchment texture 800×600
+    - Start tile special overlay (castle gate)
+    - Pawn shadow PNG
+    - UI elements: heart icon, coin icon, XP star, lap flag, victory crown
+    - Victory screen background (epic fantasy illustration)
+    
+    SOUNDS / AUDIO:
+    - Dice roll (whoosh + clatter) WAV/MP3
+    - Pawn move step (footstep on leaves) 6 variants
+    - Event triggers: chest open jingle, healing sparkle, battle slash, curse moan
+    - Gold gain / lose chimes
+    - HP damage hit sound
+    - Lap complete fanfare trumpet
+    - Victory theme (orchestral swell)
+    - Background music loop: medieval fantasy adventure (2-minute loop)
+    
+    FONTS:
+    - Custom fantasy title font (already using UnifrakturCook as placeholder)
+    - Pixel font for log (already using Press Start 2P)
+    
+    OTHER:
+    - Particle system for gold sparkles, healing glows, damage blood
+    - Animated fireflies on board background
+    -->
+
+    <div id="game-container">
+        <!-- LEFT SIDEBAR: PLAYER STATS -->
+        <div id="sidebar">
+            <!-- Player 1 -->
+            <div class="player-panel" id="p1-panel">
+                <div class="player-header" style="color: #4fc3f7;">🧙 HUMAN HERO</div>
+                <div class="player-stats">
+                    <div class="stat"><span class="stat-emoji">❤️</span><span id="p1-hp">100</span></div>
+                    <div class="stat"><span class="stat-emoji">💰</span><span id="p1-gold">0</span></div>
+                    <div class="stat"><span class="stat-emoji">⭐</span><span id="p1-xp">0</span></div>
+                    <div class="stat"><span class="stat-emoji">🏁</span><span id="p1-laps">0</span></div>
+                </div>
+                <div class="hp-bar-container">
+                    <div id="p1-hp-bar" class="hp-bar" style="width: 100%;"></div>
+                </div>
+            </div>
+
+            <!-- Player 2 -->
+            <div class="player-panel" id="p2-panel">
+                <div class="player-header" style="color: #e74c3c;">👹 SHADOW ORC</div>
+                <div class="player-stats">
+                    <div class="stat"><span class="stat-emoji">❤️</span><span id="p2-hp">100</span></div>
+                    <div class="stat"><span class="stat-emoji">💰</span><span id="p2-gold">0</span></div>
+                    <div class="stat"><span class="stat-emoji">⭐</span><span id="p2-xp">0</span></div>
+                    <div class="stat"><span class="stat-emoji">🏁</span><span id="p2-laps">0</span></div>
+                </div>
+                <div class="hp-bar-container">
+                    <div id="p2-hp-bar" class="hp-bar" style="width: 100%;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- CENTER BOARD -->
+        <div id="board-area">
+            <h1 style="font-family: 'UnifrakturCook', cursive; font-size: 42px; color: #f4c542; text-shadow: 6px 6px 0 #000; margin: 0;">QUEST OF THE ETERNAL PATH</h1>
+            
+            <canvas id="board-canvas" width="800" height="600"></canvas>
+            
+            <div id="controls">
+                <div id="turn-indicator">🧙 HUMAN HERO'S TURN</div>
+                <button id="roll-button">ROLL DICE 🎲</button>
+                <div id="dice-display">🎲</div>
+            </div>
+        </div>
+
+        <!-- RIGHT LOG -->
+        <div id="log-panel">
+            <h3 style="margin: 0 0 12px 0; text-align: center; font-size: 18px; color: #f4c542;">EVENT SCROLL</h3>
+            <div id="event-log"></div>
+        </div>
+    </div>
+
+    <!-- EVENT POPUP -->
+    <div id="event-popup">
+        <h2 id="popup-title">EVENT!</h2>
+        <div id="event-desc"></div>
+        <div id="event-changes"></div>
+        <button id="popup-close">CONTINUE ADVENTURE</button>
+    </div>
+
+    <!-- VICTORY SCREEN -->
+    <div id="victory-screen">
+        <div class="winner-badge" id="winner-name"></div>
+        <h1 id="victory-title">VICTORY!</h1>
+        
+        <div class="final-stats">
+            <div style="text-align:center;">
+                <div style="color:#4fc3f7; font-size:28px;">🧙 HUMAN HERO</div>
+                <div id="final-p1-stats" style="margin-top:20px; font-size:18px; line-height:1.8;"></div>
+            </div>
+            <div style="text-align:center;">
+                <div style="color:#e74c3c; font-size:28px;">👹 SHADOW ORC</div>
+                <div id="final-p2-stats" style="margin-top:20px; font-size:18px; line-height:1.8;"></div>
+            </div>
+        </div>
+        
+        <button onclick="restartGame()" style="background:#c0392b; color:white; font-size:24px; padding:16px 60px; border:8px solid gold; border-radius:12px; cursor:pointer;">
+            PLAY AGAIN
+        </button>
+    </div>
+
+    <script>
+        // ====================== GAME CONSTANTS ======================
+        const BOARD_SIZE = 25;
+        const CANVAS_WIDTH = 800;
+        const CANVAS_HEIGHT = 600;
+        
+        // Pre-calculated serpentine tile positions (zig-zag path)
+        let tilePositions = [];
+        function generateTilePositions() {
+            tilePositions = [];
+            const cols = 5;
+            const tileW = 100;
+            const startX = 80;
+            const startY = 520;
+            const rowH = 90;
+            
+            for (let i = 0; i < BOARD_SIZE; i++) {
+                const row = Math.floor(i / cols);
+                let col = i % cols;
+                // Serpentine: even rows left→right, odd rows right→left
+                if (row % 2 === 1) col = cols - 1 - col;
+                
+                const x = startX + col * tileW;
+                const y = startY - row * rowH;
+                tilePositions.push({x, y});
+            }
+        }
+
+        // ====================== GAME STATE ======================
+        let players = [
+            {
+                id: 1,
+                name: "Human Hero",
+                color: "#4fc3f7",
+                shape: "circle",
+                hp: 100,
+                gold: 0,
+                xp: 0,
+                laps: 0,
+                position: 0,
+                skipNextTurn: false
+            },
+            {
+                id: 2,
+                name: "Shadow Orc",
+                color: "#e74c3c",
+                shape: "square",
+                hp: 100,
+                gold: 0,
+                xp: 0,
+                laps: 0,
+                position: 0,
+                skipNextTurn: false
+            }
+        ];
+
+        let currentPlayerIndex = 0;
+        let gameOver = false;
+
+        // 20 RPG events
+        const eventsList = [
+            { desc: "Found a hidden chest!", apply: (p) => { p.gold += 30; } },
+            { desc: "Drank from a healing spring.", apply: (p) => { p.hp += 20; } },
+            { desc: "Ambushed by bandits!", apply: (p) => { p.hp -= 15; p.gold -= 10; } },
+            { desc: "Defeated a wandering goblin.", apply: (p) => { p.xp += 15; p.gold += 10; } },
+            { desc: "Fell into a spike trap.", apply: (p) => { p.hp -= 20; } },
+            { desc: "Helped a lost merchant.", apply: (p) => { p.gold += 40; } },
+            { desc: "Pickpocketed in the crowded market.", apply: (p) => { p.gold -= 25; } },
+            { desc: "Discovered an ancient runestone.", apply: (p) => { p.xp += 30; } },
+            { desc: "Ate a poisonous mushroom.", apply: (p) => { p.hp -= 10; } },
+            { desc: "Rescued a trapped fairy.", apply: (p) => { p.hp += 10; p.xp += 20; } },
+            { desc: "Got lost in the foggy woods.", apply: (p) => {}, extraSteps: -2 },
+            { desc: "Found a forgotten coin purse.", apply: (p) => { p.gold += 15; } },
+            { desc: "Cursed by a swamp hag.", apply: (p) => { p.xp -= 20; } },
+            { desc: "Rested at a friendly tavern.", apply: (p) => { p.hp += 30; p.gold -= 5; } },
+            { desc: "Attacked by a Mimic!", apply: (p) => { p.hp -= 25; } },
+            { desc: "Toll bridge troll demands payment.", apply: (p) => { p.gold -= 20; } },
+            { desc: "Received a blessing from a local cleric.", apply: (p) => { p.hp += 20; p.xp += 20; } },
+            { desc: "Found a hidden shortcut!", apply: (p) => {}, extraSteps: 3 },
+            { desc: "Bought a better sword from a traveler.", apply: (p) => { p.gold -= 30; p.xp += 40; } },
+            { desc: "Survived the underground arena.", apply: (p) => { p.hp -= 30; p.gold += 50; p.xp += 50; } }
+        ];
+
+        // ====================== DOM ELEMENTS ======================
+        const canvas = document.getElementById('board-canvas');
+        const ctx = canvas.getContext('2d');
+        
+        const rollButton = document.getElementById('roll-button');
+        const diceDisplay = document.getElementById('dice-display');
+        const turnIndicator = document.getElementById('turn-indicator');
+        
+        const p1Hp = document.getElementById('p1-hp');
+        const p1Gold = document.getElementById('p1-gold');
+        const p1Xp = document.getElementById('p1-xp');
+        const p1Laps = document.getElementById('p1-laps');
+        const p1HpBar = document.getElementById('p1-hp-bar');
+        
+        const p2Hp = document.getElementById('p2-hp');
+        const p2Gold = document.getElementById('p2-gold');
+        const p2Xp = document.getElementById('p2-xp');
+        const p2Laps = document.getElementById('p2-laps');
+        const p2HpBar = document.getElementById('p2-hp-bar');
+        
+        const eventLog = document.getElementById('event-log');
+        const popup = document.getElementById('event-popup');
+        const popupDesc = document.getElementById('event-desc');
+        const popupChanges = document.getElementById('event-changes');
+        const popupClose = document.getElementById('popup-close');
+        
+        const victoryScreen = document.getElementById('victory-screen');
+        const winnerName = document.getElementById('winner-name');
+        const finalP1 = document.getElementById('final-p1-stats');
+        const finalP2 = document.getElementById('final-p2-stats');
+
+        // ====================== HELPERS ======================
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        function clampStats(player) {
+            player.hp = Math.max(0, player.hp);
+            player.gold = Math.max(0, player.gold);
+            player.xp = Math.max(0, player.xp);
+        }
+
+        function addLog(message) {
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            entry.innerHTML = message;
+            eventLog.appendChild(entry);
+            eventLog.scrollTop = eventLog.scrollHeight;
+        }
+
+        function updateStatsUI() {
+            // Player 1
+            p1Hp.textContent = players[0].hp;
+            p1Gold.textContent = players[0].gold;
+            p1Xp.textContent = players[0].xp;
+            p1Laps.textContent = players[0].laps;
+            const p1Pct = Math.min(100, Math.max(0, players[0].hp / 2)); // visual cap at 200
+            p1HpBar.style.width = `${p1Pct}%`;
+            
+            // Player 2
+            p2Hp.textContent = players[1].hp;
+            p2Gold.textContent = players[1].gold;
+            p2Xp.textContent = players[1].xp;
+            p2Laps.textContent = players[1].laps;
+            const p2Pct = Math.min(100, Math.max(0, players[1].hp / 2));
+            p2HpBar.style.width = `${p2Pct}%`;
+        }
+
+        // ====================== CANVAS DRAWING ======================
+        function drawBoard() {
+            ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+            
+            // Background forest tint
+            ctx.fillStyle = '#0a3d2b';
+            ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+            
+            // Draw winding path line
+            ctx.strokeStyle = '#5d3f1e';
+            ctx.lineWidth = 28;
+            ctx.lineJoin = 'round';
+            ctx.lineCap = 'round';
+            ctx.shadowBlur = 20;
+            ctx.shadowColor = '#3a2a14';
+            ctx.beginPath();
+            ctx.moveTo(tilePositions[0].x, tilePositions[0].y);
+            for (let i = 1; i < tilePositions.length; i++) {
+                ctx.lineTo(tilePositions[i].x, tilePositions[i].y);
+            }
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+            
+            // Draw tiles
+            for (let i = 0; i < BOARD_SIZE; i++) {
+                const pos = tilePositions[i];
+                const isStart = i === 0;
+                const isEndZone = i === 24;
+                
+                // Tile base
+                ctx.fillStyle = isStart ? '#3a8e3a' : isEndZone ? '#8e3a3a' : '#5e8c4b';
+                ctx.strokeStyle = '#f4c542';
+                ctx.lineWidth = 6;
+                
+                ctx.save();
+                ctx.translate(pos.x, pos.y);
+                ctx.rotate(Math.sin(i) * 0.05); // subtle fantasy tilt
+                ctx.fillRect(-32, -32, 64, 64);
+                ctx.strokeRect(-32, -32, 64, 64);
+                ctx.restore();
+                
+                // Tile number / label
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 18px "Press Start 2P"';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                let label = isStart ? '🏰' : (i + 1).toString();
+                ctx.fillText(label, pos.x, pos.y + 2);
+            }
+            
+            // Draw pawns
+            const p1 = players[0];
+            const p2 = players[1];
+            const sameTile = p1.position === p2.position;
+            
+            // Player 1 (blue circle)
+            let p1Pos = tilePositions[p1.position];
+            let p1Offset = sameTile ? -22 : 0;
+            ctx.fillStyle = p1.color;
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 6;
+            ctx.beginPath();
+            ctx.arc(p1Pos.x + p1Offset, p1Pos.y, 22, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+            
+            // P1 label
+            ctx.fillStyle = '#000';
+            ctx.font = 'bold 14px "Press Start 2P"';
+            ctx.fillText('1', p1Pos.x + p1Offset, p1Pos.y + 5);
+            
+            // Player 2 (red square)
+            let p2Pos = tilePositions[p2.position];
+            let p2Offset = sameTile ? 22 : 0;
+            ctx.fillStyle = p2.color;
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 6;
+            ctx.fillRect(p2Pos.x + p2Offset - 20, p2Pos.y - 20, 40, 40);
+            ctx.strokeRect(p2Pos.x + p2Offset - 20, p2Pos.y - 20, 40, 40);
+            
+            // P2 label
+            ctx.fillStyle = '#000';
+            ctx.fillText('2', p2Pos.x + p2Offset, p2Pos.y + 5);
+        }
+
+        // ====================== MOVEMENT ANIMATION ======================
+        async function animateMovement(player, steps) {
+            const direction = steps > 0 ? 1 : -1;
+            const absSteps = Math.abs(steps);
+            
+            for (let i = 0; i < absSteps; i++) {
+                const oldPos = player.position;
+                player.position = (player.position + direction + BOARD_SIZE) % BOARD_SIZE;
+                
+                // Lap detection (only forward crossing from 24 → 0)
+                if (direction > 0 && oldPos === 24 && player.position === 0) {
+                    player.laps++;
+                }
+                
+                drawBoard();
+                updateStatsUI();
+                await sleep(180);
+            }
+        }
+
+        // ====================== EVENT HANDLING ======================
+        async function triggerEvent(player) {
+            const eventIndex = Math.floor(Math.random() * eventsList.length);
+            const ev = eventsList[eventIndex];
+            
+            // Store old values for popup
+            const oldHp = player.hp;
+            const oldGold = player.gold;
+            const oldXp = player.xp;
+            
+            ev.apply(player);
+            
+            // Extra movement (shortcut / lost)
+            let extraMove = ev.extraSteps || 0;
+            
+            // Clamp & check death
+            const wasAlive = player.hp > 0;
+            clampStats(player);
+            if (wasAlive && player.hp <= 0) {
+                player.skipNextTurn = true;
+            }
+            
+            // Build changes list
+            let changesHTML = '';
+            if (player.hp !== oldHp) changesHTML += `❤️ HP ${player.hp > oldHp ? '+' : ''}${player.hp - oldHp}<br>`;
+            if (player.gold !== oldGold) changesHTML += `💰 Gold ${player.gold > oldGold ? '+' : ''}${player.gold - oldGold}<br>`;
+            if (player.xp !== oldXp) changesHTML += `⭐ XP ${player.xp > oldXp ? '+' : ''}${player.xp - oldXp}<br>`;
+            
+            // Show popup
+            popupDesc.textContent = ev.desc;
+            popupChanges.innerHTML = changesHTML || '<em>No stat change...</em>';
+            popup.style.display = 'flex';
+            
+            // Wait for player to click continue
+            await new Promise(resolve => {
+                popupClose.onclick = () => {
+                    popup.style.display = 'none';
+                    resolve();
+                };
+            });
+            
+            // Extra movement AFTER popup
+            if (extraMove !== 0) {
+                addLog(`<strong>${player.name}:</strong> <span style="color:#f4c542">${ev.desc}</span> → <em>moving ${extraMove > 0 ? '+' : ''}${extraMove} spaces</em>`);
+                await animateMovement(player, extraMove);
+            }
+            
+            drawBoard();
+            updateStatsUI();
+        }
+
+        // ====================== PLAYER TURN LOGIC ======================
+        async function takeTurn() {
+            if (gameOver) return;
+            
+            const player = players[currentPlayerIndex];
+            
+            // Update turn display
+            turnIndicator.textContent = `${player.shape === 'circle' ? '🧙' : '👹'} ${player.name.toUpperCase()}'S TURN`;
+            turnIndicator.style.color = player.color;
+            
+            // Check revive
+            if (player.skipNextTurn) {
+                player.hp = 50;
+                player.skipNextTurn = false;
+                clampStats(player);
+                addLog(`<strong>${player.name} revived!</strong> ❤️ +50 HP`);
+                updateStatsUI();
+                drawBoard();
+                await sleep(1200);
+                endTurn();
+                return;
+            }
+            
+            // Roll dice
+            if (player.id === 1) {
+                // Human turn - wait for button
+                rollButton.disabled = false;
+                return; // button handler will continue
+            } else {
+                // CPU turn
+                rollButton.disabled = true;
+                rollButton.textContent = "CPU THINKING...";
+                
+                // Auto roll
+                const roll = await cpuRollAnimation();
+                addLog(`<strong>Shadow Orc rolled:</strong> 🎲 <span style="color:#f4c542">${roll}</span>`);
+                
+                await animateMovement(player, roll);
+                
+                await triggerEvent(player);
+                
+                checkWinCondition();
+                if (!gameOver) endTurn();
+            }
+        }
+
+        async function cpuRollAnimation() {
+            let result = Math.floor(Math.random() * 6) + 1;
+            for (let i = 0; i < 14; i++) {
+                diceDisplay.textContent = `🎲 ${Math.floor(Math.random() * 6) + 1}`;
+                await sleep(70);
+            }
+            diceDisplay.textContent = `🎲 ${result}`;
+            await sleep(400);
+            return result;
+        }
+
+        // Human roll handler
+        async function handleHumanRoll() {
+            if (gameOver || currentPlayerIndex !== 0) return;
+            
+            rollButton.disabled = true;
+            rollButton.textContent = "ROLLING...";
+            
+            const roll = await humanRollAnimation();
+            addLog(`<strong>Human Hero rolled:</strong> 🎲 <span style="color:#f4c542">${roll}</span>`);
+            
+            await animateMovement(players[0], roll);
+            
+            await triggerEvent(players[0]);
+            
+            checkWinCondition();
+            if (!gameOver) endTurn();
+        }
+
+        async function humanRollAnimation() {
+            let result = Math.floor(Math.random() * 6) + 1;
+            for (let i = 0; i < 14; i++) {
+                diceDisplay.textContent = `🎲 ${Math.floor(Math.random() * 6) + 1}`;
+                await sleep(70);
+            }
+            diceDisplay.textContent = `🎲 ${result}`;
+            await sleep(400);
+            return result;
+        }
+
+        function endTurn() {
+            currentPlayerIndex = 1 - currentPlayerIndex;
+            rollButton.disabled = false;
+            rollButton.textContent = "ROLL DICE 🎲";
+            takeTurn();
+        }
+
+        function checkWinCondition() {
+            for (let i = 0; i < 2; i++) {
+                if (players[i].laps >= 5) {
+                    gameOver = true;
+                    showVictoryScreen(i);
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        function showVictoryScreen(winnerIndex) {
+            const winner = players[winnerIndex];
+            winnerName.textContent = `${winner.name} WINS!`;
+            winnerName.style.color = winner.color;
+            
+            finalP1.innerHTML = `
+                ❤️ HP: ${players[0].hp}<br>
+                💰 Gold: ${players[0].gold}<br>
+                ⭐ XP: ${players[0].xp}<br>
+                🏁 Laps: ${players[0].laps}
+            `;
+            finalP2.innerHTML = `
+                ❤️ HP: ${players[1].hp}<br>
+                💰 Gold: ${players[1].gold}<br>
+                ⭐ XP: ${players[1].xp}<br>
+                🏁 Laps: ${players[1].laps}
+            `;
+            
+            victoryScreen.style.display = 'flex';
+        }
+
+        function restartGame() {
+            // Reset everything
+            players[0].hp = 100; players[0].gold = 0; players[0].xp = 0; players[0].laps = 0; players[0].position = 0; players[0].skipNextTurn = false;
+            players[1].hp = 100; players[1].gold = 0; players[1].xp = 0; players[1].laps = 0; players[1].position = 0; players[1].skipNextTurn = false;
+            
+            currentPlayerIndex = 0;
+            gameOver = false;
+            eventLog.innerHTML = '';
+            victoryScreen.style.display = 'none';
+            popup.style.display = 'none';
+            
+            addLog('<span style="color:#0f0">New adventure begins...</span>');
+            
+            drawBoard();
+            updateStatsUI();
+            takeTurn();
+        }
+
+        // ====================== INITIALIZATION ======================
+        function initGame() {
+            generateTilePositions();
+            
+            // Draw initial board
+            drawBoard();
+            updateStatsUI();
+            
+            // Log welcome
+            addLog('<strong>Welcome to the Eternal Path!</strong><br>First to 5 laps wins!');
+            
+            // Button listeners
+            rollButton.addEventListener('click', handleHumanRoll);
+            popupClose.addEventListener('click', () => {}); // already handled dynamically
+            
+            // Start first turn
+            takeTurn();
+        }
+
+        // Boot the game
+        window.onload = initGame;
+    </script>
+</body>
+</html>

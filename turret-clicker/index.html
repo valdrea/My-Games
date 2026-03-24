@@ -1,0 +1,1082 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Siege Forge | ADVANCED Turret Defense Clicker</title>
+    <style>
+        * {
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: radial-gradient(circle at 20% 30%, #0a0c18, #03050b);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Segoe UI', 'Orbitron', 'Courier New', monospace;
+            margin: 0;
+            padding: 24px;
+        }
+
+        .game-wrapper {
+            max-width: 1100px;
+            width: 100%;
+            background: rgba(12, 20, 28, 0.72);
+            backdrop-filter: blur(12px);
+            border-radius: 48px;
+            padding: 20px;
+            box-shadow: 0 25px 55px rgba(0,0,0,0.75), inset 0 1px 1px rgba(255,255,255,0.12);
+            border: 1px solid rgba(80, 200, 255, 0.5);
+        }
+
+        canvas {
+            display: block;
+            margin: 0 auto;
+            border-radius: 28px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.65), inset 0 0 0 3px rgba(255,255,230,0.1);
+            cursor: crosshair;
+            background: radial-gradient(ellipse at 30% 40%, #131c2a, #02060f);
+            width: 100%;
+            height: auto;
+            aspect-ratio: 1000 / 580;
+        }
+
+        .dashboard {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            gap: 12px;
+            margin: 18px 8px 16px 8px;
+        }
+
+        .stat-block {
+            background: rgba(0, 5, 12, 0.75);
+            backdrop-filter: blur(6px);
+            border-radius: 48px;
+            padding: 6px 18px;
+            border-left: 4px solid #3cc5ff;
+            font-weight: bold;
+            font-size: 1rem;
+            color: #eaf6ff;
+            text-shadow: 0 0 4px #0077ff;
+            font-family: monospace;
+            letter-spacing: 1px;
+            box-shadow: 0 5px 14px rgba(0,0,0,0.35);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .stat-block span:first-child {
+            font-size: 1.35rem;
+            filter: drop-shadow(0 0 3px gold);
+        }
+
+        .stat-value {
+            color: #ffd966;
+            font-size: 1.45rem;
+            font-weight: bold;
+            margin-left: 4px;
+        }
+
+        .button-bar {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 12px;
+            margin: 18px 0 10px;
+        }
+
+        .game-btn {
+            background: linear-gradient(115deg, #1f2c3c, #0f1822);
+            border: none;
+            padding: 10px 26px;
+            border-radius: 100px;
+            font-family: 'Segoe UI', monospace;
+            font-weight: bold;
+            font-size: 0.84rem;
+            color: #eef5ff;
+            cursor: pointer;
+            box-shadow: 0 6px 0 #03060b;
+            transition: 0.07s linear;
+            backdrop-filter: blur(5px);
+            border: 1px solid #2f5575;
+            letter-spacing: 0.6px;
+        }
+
+        .game-btn:active {
+            transform: translateY(3px);
+            box-shadow: 0 2px 0 #03060b;
+        }
+
+        .game-btn.primary {
+            background: linear-gradient(135deg, #1f5a7e, #0d3852);
+            border-color: #5fbbff;
+            text-shadow: 0 0 4px cyan;
+        }
+
+        .game-btn.warning {
+            background: linear-gradient(135deg, #642c3a, #3a1823);
+            border-color: #ff8a6f;
+        }
+
+        .limit-badge {
+            background: #000000bb;
+            border-radius: 60px;
+            padding: 4px 14px;
+            font-size: 0.72rem;
+            font-weight: bold;
+            color: #c9e9ff;
+            text-align: center;
+            display: inline-block;
+            margin-left: 12px;
+        }
+
+        footer {
+            text-align: center;
+            font-size: 0.72rem;
+            color: #6e8fb0;
+            margin-top: 14px;
+            line-height: 1.3;
+        }
+
+        @media (max-width: 760px) {
+            .stat-block { padding: 4px 12px; font-size: 0.72rem;}
+            .stat-value { font-size: 1.05rem; }
+            .game-btn { padding: 8px 16px; font-size: 0.73rem;}
+        }
+    </style>
+</head>
+<body>
+<div class="game-wrapper">
+    <canvas id="gameCanvas" width="1000" height="580" style="width:100%; height:auto; max-width:1000px; aspect-ratio:1000/580"></canvas>
+    
+    <div class="dashboard">
+        <div class="stat-block"><span>💰</span> GOLD <span class="stat-value" id="goldAmount">200</span></div>
+        <div class="stat-block"><span>❤️</span> CORE <span class="stat-value" id="baseHp">25</span></div>
+        <div class="stat-block"><span>🌊</span> WAVE <span class="stat-value" id="waveNum">1</span></div>
+        <div class="stat-block"><span>⚔️</span> KILLS <span class="stat-value" id="killCount">0</span></div>
+        <div class="stat-block"><span>🏆</span> BEST <span class="stat-value" id="highScore">0</span></div>
+        <div class="stat-block"><span>🔫</span> TURRETS <span class="stat-value" id="turretCount">0</span><span class="limit-badge">/10</span></div>
+    </div>
+
+    <div class="button-bar">
+        <button id="buyTurretBtn" class="game-btn primary">🔫 BUY TURRET (<span id="turretCost">80</span>💰)</button>
+        <button id="upgradeClickBtn" class="game-btn">💥 CLICK DMG +1 (<span id="clickUpCost">50</span>💰)</button>
+        <button id="upgradeTurretDmgBtn" class="game-btn">⚡ TURRET DMG +1 (<span id="turretUpCost">70</span>💰)</button>
+        <button id="upgradeFireBtn" class="game-btn">⚡ FIRE RATE (<span id="fireUpCost">90</span>💰)</button>
+        <button id="upgradeRangeBtn" class="game-btn">📏 RANGE +22 (<span id="rangeUpCost">110</span>💰)</button>
+        <button id="airstrikeBtn" class="game-btn warning">💥 AIRSTRIKE (<span id="strikeCost">150</span>💰)</button>
+        <button id="muteBtn" class="game-btn">🔊 ON</button>
+        <button id="restartBtn" class="game-btn warning">🔄 RESTART</button>
+    </div>
+    <footer>
+        ⚡ BUY then CLICK battlefield to PLACE turrets • New enemy types • Particles • Sounds • Range + Fire-rate upgrades • Airstrikes • BOSSES every 5 waves ⚡<br>
+        TURRETS auto-target closest threat in range | Every 5th wave = LEGENDARY BOSS
+    </footer>
+</div>
+
+<script>
+    (function(){
+        // ---------- CANVAS ----------
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // ---------- GLOBALS ----------
+        let gameActive = true;
+        let gold = 200;
+        let baseHealth = 25;
+        let wave = 1;
+        let totalKills = 0;
+        let highScore = localStorage.getItem('tdClickerHigh') ? parseInt(localStorage.getItem('tdClickerHigh')) : 0;
+        
+        // upgrades
+        let clickDamage = 1;
+        let turretDamage = 1;
+        let baseFireRate = 36;
+        let baseRange = 280;
+        
+        // costs
+        let baseTurretCost = 80;
+        let clickUpgradeCost = 50;
+        let turretDmgUpgradeCost = 70;
+        let fireUpCost = 90;
+        let rangeUpCost = 110;
+        let strikeCost = 150;
+        
+        // turrets
+        let turrets = [];
+        const MAX_TURRETS = 10;
+        
+        // enemies & projectiles
+        let enemies = [];
+        let projectiles = [];
+        let particles = [];
+        
+        // wave system
+        let waveRegularRemaining = 0;
+        let waveBossSpawned = false;
+        let waveBossEntity = null;
+        let waveInProgress = true;
+        let spawnDelayFrames = 0;
+        
+        // visual & input
+        let floatingNumbers = [];
+        let hitFlashes = [];
+        let worldMessage = { text: "", timer: 0 };
+        let placingMode = false;
+        let mouseX = 500;
+        let mouseY = 290;
+        let gameFrame = 0;
+        
+        // audio
+        let audioCtx;
+        try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e){}
+        let soundEnabled = true;
+        
+        // ---------- UI helpers ----------
+        function updateUI() {
+            document.getElementById('goldAmount').innerText = Math.floor(gold);
+            document.getElementById('baseHp').innerText = baseHealth;
+            document.getElementById('waveNum').innerText = wave;
+            document.getElementById('killCount').innerText = totalKills;
+            document.getElementById('turretCount').innerText = turrets.length;
+            document.getElementById('highScore').innerText = highScore;
+            document.getElementById('turretCost').innerText = baseTurretCost;
+            document.getElementById('clickUpCost').innerText = clickUpgradeCost;
+            document.getElementById('turretUpCost').innerText = turretDmgUpgradeCost;
+            document.getElementById('fireUpCost').innerText = fireUpCost;
+            document.getElementById('rangeUpCost').innerText = rangeUpCost;
+            document.getElementById('strikeCost').innerText = strikeCost;
+            document.getElementById('muteBtn').innerText = soundEnabled ? '🔊 ON' : '🔇 OFF';
+        }
+        
+        function saveHighScore() {
+            if(totalKills > highScore) {
+                highScore = totalKills;
+                localStorage.setItem('tdClickerHigh', highScore);
+                updateUI();
+            }
+        }
+        
+        function addFloatingNumber(x, y, dmg) {
+            floatingNumbers.push({ x, y, value: dmg, life: 1.0 });
+        }
+        
+        function setWorldMessage(msg, duration=80) {
+            worldMessage.text = msg;
+            worldMessage.timer = duration;
+        }
+        
+        // ---------- AUDIO ----------
+        function playSound(type) {
+            if(!audioCtx || !soundEnabled) return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            
+            if(type === 'shoot') {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(680, audioCtx.currentTime);
+                gain.gain.value = 0.22;
+                osc.start();
+                setTimeout(() => osc.stop(), 45);
+            } else if(type === 'hit') {
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(210, audioCtx.currentTime);
+                gain.gain.value = 0.35;
+                osc.start();
+                setTimeout(() => osc.stop(), 85);
+            } else if(type === 'kill') {
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(95, audioCtx.currentTime);
+                gain.gain.value = 0.55;
+                osc.start();
+                setTimeout(() => { osc.frequency.setValueAtTime(42, audioCtx.currentTime); }, 35);
+                setTimeout(() => osc.stop(), 210);
+            } else if(type === 'gold') {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(920, audioCtx.currentTime);
+                gain.gain.value = 0.3;
+                osc.start();
+                setTimeout(() => osc.stop(), 130);
+            } else if(type === 'strike') {
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(68, audioCtx.currentTime);
+                gain.gain.value = 0.65;
+                osc.start();
+                setTimeout(() => osc.stop(), 195);
+            }
+        }
+        
+        // ---------- PARTICLES ----------
+        function createParticles(x, y, count, color, spread = 2.8) {
+            for(let i = 0; i < count; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const vel = 1.2 + Math.random() * spread;
+                particles.push({
+                    x: x,
+                    y: y,
+                    vx: Math.cos(angle) * vel,
+                    vy: Math.sin(angle) * vel,
+                    life: 22 + Math.random() * 18,
+                    size: 2.8 + Math.random() * 3.5,
+                    color: color
+                });
+            }
+        }
+        
+        function updateParticles() {
+            for(let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.vx *= 0.94;
+                p.vy *= 0.94;
+                p.life--;
+                if(p.life <= 0) particles.splice(i, 1);
+            }
+        }
+        
+        // ---------- ENEMY SPAWN ----------
+        function createRegularEnemy() {
+            let baseHp = 1 + Math.floor(wave / 2.1);
+            let speed = 1.05 + (wave * 0.082);
+            if(speed > 3.1) speed = 3.1;
+            let reward = 8 + Math.floor(Math.random() * 9) + Math.floor(wave / 2);
+            
+            const roll = Math.random();
+            let type = roll < 0.42 ? 'grunt' : (roll < 0.78 ? 'runner' : 'tank');
+            
+            let health = Math.max(1, baseHp + (Math.random() > 0.65 ? 1 : 0));
+            let radius = 16;
+            
+            if(type === 'runner') {
+                health = Math.max(1, Math.floor(health * 0.68));
+                speed *= 1.68;
+                reward = Math.floor(reward * 0.88);
+                radius = 13;
+            } else if(type === 'tank') {
+                health = Math.floor(health * 2.15);
+                speed *= 0.56;
+                reward = Math.floor(reward * 1.78);
+                radius = 22;
+            }
+            
+            const y = 48 + Math.random() * (canvas.height - 108);
+            
+            return {
+                x: canvas.width - 42,
+                y: y,
+                baseY: y,
+                bobPhase: Math.random() * Math.PI * 2,
+                health: health,
+                maxHealth: health,
+                speed: speed,
+                reward: reward,
+                radius: radius,
+                isBoss: false,
+                type: type,
+                bossType: null
+            };
+        }
+        
+        function spawnBossEnemy(isMajorBoss) {
+            let health, speed, reward, radius;
+            if(isMajorBoss) {
+                health = 72 + Math.floor(wave * 13);
+                speed = 0.53;
+                reward = 245 + wave * 15;
+                radius = 34;
+            } else {
+                health = 24 + Math.floor(wave * 4.8);
+                speed = 0.79;
+                reward = 78 + wave * 6.5;
+                radius = 27;
+            }
+            reward = Math.floor(reward);
+            
+            const y = canvas.height / 2 + (Math.random() * 82 - 41);
+            
+            const boss = {
+                x: canvas.width - 46,
+                y: y,
+                baseY: y,
+                bobPhase: Math.random() * Math.PI * 2,
+                health: health,
+                maxHealth: health,
+                speed: speed,
+                reward: reward,
+                radius: radius,
+                isBoss: true,
+                type: 'boss',
+                bossType: isMajorBoss ? "MAJOR" : "MINI"
+            };
+            enemies.push(boss);
+            waveBossEntity = boss;
+            setWorldMessage(`⚠️ ${isMajorBoss ? "LEGENDARY" : "MINI"} BOSS INBOUND! ⚠️`, 110);
+            return boss;
+        }
+        
+        function startWave() {
+            if(!gameActive) return;
+            let regularCount = 6 + Math.floor(wave * 1.45);
+            if(regularCount > 34) regularCount = 34;
+            waveRegularRemaining = regularCount;
+            waveBossSpawned = false;
+            waveBossEntity = null;
+            waveInProgress = true;
+            spawnDelayFrames = 9;
+            updateUI();
+        }
+        
+        function spawnRegularEnemy() {
+            if(waveRegularRemaining <= 0) return;
+            enemies.push(createRegularEnemy());
+            waveRegularRemaining--;
+        }
+        
+        function finishWave() {
+            if(!gameActive) return;
+            wave++;
+            gold += 58 + Math.floor(wave * 3.5);
+            updateUI();
+            startWave();
+        }
+        
+        // ---------- DAMAGE ----------
+        function damageEnemy(enemy, dmg, isClick = false) {
+            if(!enemy || enemy.health <= 0) return false;
+            const oldHealth = enemy.health;
+            enemy.health -= dmg;
+            const actual = Math.min(dmg, oldHealth);
+            
+            if(actual > 0) {
+                addFloatingNumber(enemy.x + 6, enemy.y - 14, actual);
+                hitFlashes.push({ enemy: enemy, timer: 5 });
+                playSound('hit');
+            }
+            
+            if(enemy.health <= 0) {
+                gold += enemy.reward;
+                totalKills++;
+                saveHighScore();
+                playSound('kill');
+                createParticles(enemy.x, enemy.y, Math.floor(enemy.radius * 1.4), '#ffaa33', 3.8);
+                
+                const index = enemies.indexOf(enemy);
+                if(index !== -1) enemies.splice(index, 1);
+                
+                if(enemy.isBoss) {
+                    waveBossEntity = null;
+                    setWorldMessage(`💀 ${enemy.bossType} BOSS DOWN! +${enemy.reward}💰`, 75);
+                    checkWaveCompletion();
+                }
+                updateUI();
+                return true;
+            }
+            return false;
+        }
+        
+        function checkWaveCompletion() {
+            if(!gameActive) return;
+            const noEnemies = enemies.length === 0;
+            const bossDone = (waveBossSpawned && waveBossEntity === null) || !waveBossSpawned;
+            if(waveRegularRemaining === 0 && bossDone && noEnemies && waveInProgress) {
+                waveInProgress = false;
+                finishWave();
+            }
+        }
+        
+        // ---------- TURRET UPDATES (per-turret targeting + range) ----------
+        function updateTurrets() {
+            if(!gameActive || enemies.length === 0) return;
+            const currRange = baseRange;
+            
+            for(let turret of turrets) {
+                if(turret.cooldown > 0) {
+                    turret.cooldown--;
+                    continue;
+                }
+                
+                // find enemies in range
+                let targets = enemies.filter(e => {
+                    const dx = e.x - turret.x;
+                    const dy = e.y - turret.y;
+                    return Math.hypot(dx, dy) <= currRange && e.health > 0;
+                });
+                
+                if(targets.length === 0) continue;
+                
+                // prioritize boss → closest to base
+                targets.sort((a, b) => {
+                    if(a.isBoss && !b.isBoss) return -1;
+                    if(!a.isBoss && b.isBoss) return 1;
+                    return a.x - b.x;
+                });
+                
+                const target = targets[0];
+                
+                projectiles.push({
+                    x: turret.x + 14,
+                    y: turret.y,
+                    target: target,
+                    damage: turretDamage,
+                    speed: 7.4,
+                    radius: 6
+                });
+                
+                turret.cooldown = baseFireRate;
+                createParticles(turret.x + 16, turret.y, 7, '#ffee99', 1.8);
+                playSound('shoot');
+            }
+        }
+        
+        function updateProjectiles() {
+            for(let i = projectiles.length - 1; i >= 0; i--) {
+                const p = projectiles[i];
+                if(!p.target || p.target.health <= 0 || !enemies.includes(p.target)) {
+                    projectiles.splice(i, 1);
+                    continue;
+                }
+                
+                const dx = p.target.x - p.x;
+                const dy = p.target.y - p.y;
+                const dist = Math.hypot(dx, dy);
+                
+                if(dist < 14) {
+                    damageEnemy(p.target, p.damage);
+                    projectiles.splice(i, 1);
+                } else {
+                    const step = Math.min(p.speed, dist);
+                    const angle = Math.atan2(dy, dx);
+                    p.x += Math.cos(angle) * step;
+                    p.y += Math.sin(angle) * step;
+                }
+            }
+        }
+        
+        function updateEnemies() {
+            for(let i = 0; i < enemies.length; i++) {
+                const e = enemies[i];
+                e.x -= e.speed;
+                
+                // bob animation
+                e.y = e.baseY + Math.sin((gameFrame / 9) + e.bobPhase) * (e.radius / 3.5 + 3);
+                
+                if(e.x <= 26) {
+                    const dmgToBase = e.isBoss ? (e.bossType === "MAJOR" ? 5 : 3) : 1;
+                    baseHealth -= dmgToBase;
+                    enemies.splice(i, 1);
+                    i--;
+                    if(e.isBoss) waveBossEntity = null;
+                    updateUI();
+                    if(baseHealth <= 0) {
+                        gameActive = false;
+                        baseHealth = 0;
+                        updateUI();
+                        setWorldMessage("💥 CORE BREACHED — GAME OVER", 160);
+                    }
+                    checkWaveCompletion();
+                }
+            }
+        }
+        
+        function updateWaveSpawning() {
+            if(!gameActive || !waveInProgress) return;
+            
+            if(waveRegularRemaining > 0) {
+                if(spawnDelayFrames <= 0) {
+                    spawnRegularEnemy();
+                    spawnDelayFrames = Math.max(9, 36 - Math.floor(wave * 1.15));
+                } else {
+                    spawnDelayFrames--;
+                }
+            } 
+            else if(!waveBossSpawned) {
+                waveBossSpawned = true;
+                const isMajor = (wave % 5 === 0);
+                spawnBossEnemy(isMajor);
+                spawnDelayFrames = 18;
+            }
+            
+            if(enemies.length === 0 && waveRegularRemaining === 0 && waveBossSpawned && waveBossEntity === null) {
+                checkWaveCompletion();
+            }
+        }
+        
+        // ---------- MOUSE / TOUCH ----------
+        function updateMousePosition(e) {
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            if(e.touches) {
+                mouseX = (e.touches[0].clientX - rect.left) * scaleX;
+                mouseY = (e.touches[0].clientY - rect.top) * scaleY;
+            } else {
+                mouseX = (e.clientX - rect.left) * scaleX;
+                mouseY = (e.clientY - rect.top) * scaleY;
+            }
+        }
+        
+        function handleCanvasClick(e) {
+            if(!gameActive) return;
+            updateMousePosition(e);
+            
+            if(placingMode) {
+                // try place
+                let valid = true;
+                // base area
+                if(mouseX < 135 || (mouseY > canvas.height - 92 && mouseX < 95)) valid = false;
+                // turret overlap
+                for(let t of turrets) {
+                    if(Math.hypot(t.x - mouseX, t.y - mouseY) < 49) valid = false;
+                }
+                // bounds
+                if(mouseX < 50 || mouseX > canvas.width - 50 || mouseY < 40 || mouseY > canvas.height - 50) valid = false;
+                
+                if(valid) {
+                    const newTurret = {
+                        x: mouseX,
+                        y: mouseY,
+                        cooldown: Math.floor(Math.random() * baseFireRate)
+                    };
+                    turrets.push(newTurret);
+                    gold -= baseTurretCost;
+                    baseTurretCost = Math.floor(baseTurretCost + 16);
+                    placingMode = false;
+                    createParticles(mouseX, mouseY, 11, '#44ffcc');
+                    playSound('gold');
+                    updateUI();
+                } else {
+                    setWorldMessage("❌ INVALID SPOT (too close to base/other turrets)", 48);
+                }
+                return; // don't damage when placing
+            }
+            
+            // normal click damage
+            for(let i = enemies.length - 1; i >= 0; i--) {
+                const enemy = enemies[i];
+                const dx = mouseX - enemy.x;
+                const dy = mouseY - enemy.y;
+                if(Math.hypot(dx, dy) < enemy.radius + 12) {
+                    damageEnemy(enemy, clickDamage, true);
+                    break;
+                }
+            }
+            updateUI();
+        }
+        
+        // ---------- UPGRADES ----------
+        function buyTurret() {
+            if(!gameActive) return;
+            if(turrets.length >= MAX_TURRETS) {
+                setWorldMessage("MAX TURRETS (10) REACHED", 50);
+                return;
+            }
+            if(gold < baseTurretCost) return;
+            placingMode = true;
+            setWorldMessage("CLICK BATTLEFIELD TO PLACE TURRET →", 70);
+        }
+        
+        function upgradeClickDamage() {
+            if(!gameActive || gold < clickUpgradeCost) return;
+            gold -= clickUpgradeCost;
+            clickDamage++;
+            clickUpgradeCost = Math.floor(clickUpgradeCost + 32);
+            updateUI();
+        }
+        
+        function upgradeTurretDamage() {
+            if(!gameActive || gold < turretDmgUpgradeCost) return;
+            gold -= turretDmgUpgradeCost;
+            turretDamage++;
+            turretDmgUpgradeCost = Math.floor(turretDmgUpgradeCost + 39);
+            updateUI();
+        }
+        
+        function upgradeFireRate() {
+            if(!gameActive || gold < fireUpCost) return;
+            gold -= fireUpCost;
+            baseFireRate = Math.max(11, baseFireRate - 4);
+            fireUpCost = Math.floor(fireUpCost + 46);
+            updateUI();
+        }
+        
+        function upgradeRange() {
+            if(!gameActive || gold < rangeUpCost) return;
+            gold -= rangeUpCost;
+            baseRange += 23;
+            rangeUpCost = Math.floor(rangeUpCost + 58);
+            updateUI();
+        }
+        
+        function airstrike() {
+            if(!gameActive || gold < strikeCost) return;
+            gold -= strikeCost;
+            const strikeDmg = 14 + Math.floor(wave * 2.8);
+            const copy = [...enemies];
+            for(let e of copy) {
+                if(e.health > 0) {
+                    damageEnemy(e, strikeDmg);
+                    createParticles(e.x, e.y, 6, '#ff3300');
+                }
+            }
+            createParticles(canvas.width / 2, 120, 28, '#ff5500', 5);
+            playSound('strike');
+            setWorldMessage("💥 ORBITAL AIRSTRIKE LANDED! 💥", 65);
+            strikeCost = Math.floor(strikeCost * 1.18) + 25;
+            updateUI();
+        }
+        
+        function toggleMute() {
+            soundEnabled = !soundEnabled;
+            updateUI();
+        }
+        
+        function restartGame() {
+            gameActive = true;
+            gold = 200;
+            baseHealth = 25;
+            wave = 1;
+            totalKills = 0;
+            clickDamage = 1;
+            turretDamage = 1;
+            baseFireRate = 36;
+            baseRange = 280;
+            turrets = [];
+            enemies = [];
+            projectiles = [];
+            particles = [];
+            floatingNumbers = [];
+            hitFlashes = [];
+            
+            baseTurretCost = 80;
+            clickUpgradeCost = 50;
+            turretDmgUpgradeCost = 70;
+            fireUpCost = 90;
+            rangeUpCost = 110;
+            strikeCost = 150;
+            
+            placingMode = false;
+            waveRegularRemaining = 0;
+            waveBossSpawned = false;
+            waveBossEntity = null;
+            waveInProgress = true;
+            spawnDelayFrames = 0;
+            gameFrame = 0;
+            
+            startWave();
+            saveHighScore();
+            updateUI();
+            setWorldMessage("⚔️ DEFENSES REBUILT — GOOD LUCK! ⚔️", 80);
+        }
+        
+        // ---------- DRAWING ----------
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // fortress base
+            ctx.fillStyle = "#263545";
+            ctx.fillRect(8, canvas.height - 78, 56, 76);
+            ctx.fillStyle = "#d9a066";
+            ctx.fillRect(14, canvas.height - 108, 38, 38);
+            ctx.fillStyle = "#f9e0a0";
+            ctx.font = "bold 26px monospace";
+            ctx.fillText("🏰", 19, canvas.height - 52);
+            
+            // core health bar
+            ctx.fillStyle = "#3c0f1a";
+            ctx.fillRect(12, canvas.height - 34, 92, 14);
+            const hpPct = Math.max(0, baseHealth / 25);
+            ctx.fillStyle = "#ff6a5c";
+            ctx.fillRect(12, canvas.height - 34, 92 * hpPct, 14);
+            ctx.fillStyle = "#ffbc7a";
+            ctx.font = "bold 11px monospace";
+            ctx.fillText(`CORE ${baseHealth}/25`, 18, canvas.height - 37);
+            
+            // range circles (subtle)
+            ctx.strokeStyle = 'rgba(110, 210, 255, 0.13)';
+            ctx.lineWidth = 1.8;
+            ctx.setLineDash([3, 9]);
+            for(let t of turrets) {
+                ctx.beginPath();
+                ctx.arc(t.x, t.y, baseRange, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+            ctx.setLineDash([]);
+            
+            // turrets
+            for(let t of turrets) {
+                ctx.shadowBlur = 6;
+                ctx.shadowColor = '#77b5e3';
+                ctx.fillStyle = "#3c5e7a";
+                ctx.fillRect(t.x - 10, t.y - 9, 20, 20);
+                ctx.fillStyle = "#77b5e3";
+                ctx.beginPath();
+                ctx.arc(t.x, t.y, 10, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = "#f5cb5c";
+                ctx.beginPath();
+                ctx.arc(t.x - 3, t.y - 3, 3.5, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = "#111";
+                ctx.beginPath();
+                ctx.arc(t.x - 4, t.y - 4, 1.4, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            ctx.shadowBlur = 0;
+            
+            // projectiles
+            for(let p of projectiles) {
+                ctx.shadowBlur = 11;
+                ctx.shadowColor = '#ffb347';
+                ctx.fillStyle = "#ffb347";
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, 6, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = "white";
+                ctx.beginPath();
+                ctx.arc(p.x - 1.5, p.y - 1.5, 2.8, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            ctx.shadowBlur = 0;
+            
+            // enemies
+            for(let e of enemies) {
+                let grad;
+                const isBoss = e.isBoss;
+                if(isBoss && e.bossType === "MAJOR") {
+                    grad = ctx.createRadialGradient(e.x - 9, e.y - 7, 6, e.x, e.y, e.radius);
+                    grad.addColorStop(0, "#9a2a3a");
+                    grad.addColorStop(1, "#3d0b18");
+                } else if(isBoss) {
+                    grad = ctx.createRadialGradient(e.x - 6, e.y - 5, 6, e.x, e.y, e.radius);
+                    grad.addColorStop(0, "#c76a3b");
+                    grad.addColorStop(1, "#632a1c");
+                } else if(e.type === 'runner') {
+                    grad = ctx.createRadialGradient(e.x - 5, e.y - 5, 4, e.x, e.y, e.radius);
+                    grad.addColorStop(0, "#aa77ff");
+                    grad.addColorStop(1, "#5522aa");
+                } else if(e.type === 'tank') {
+                    grad = ctx.createRadialGradient(e.x - 6, e.y - 6, 5, e.x, e.y, e.radius);
+                    grad.addColorStop(0, "#887744");
+                    grad.addColorStop(1, "#443322");
+                } else {
+                    grad = ctx.createRadialGradient(e.x - 4, e.y - 4, 4, e.x, e.y, e.radius);
+                    grad.addColorStop(0, "#be5f7a");
+                    grad.addColorStop(1, "#801f3f");
+                }
+                
+                ctx.beginPath();
+                ctx.arc(e.x, e.y, e.radius, 0, Math.PI * 2);
+                ctx.fillStyle = grad;
+                ctx.fill();
+                
+                // eyes
+                ctx.fillStyle = "#fff2c0";
+                ctx.beginPath();
+                ctx.arc(e.x - 6, e.y - 4, 3.2, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = "#121212";
+                ctx.beginPath();
+                ctx.arc(e.x - 7.5, e.y - 5, 1.5, 0, Math.PI * 2);
+                ctx.fill();
+                
+                if(isBoss) {
+                    ctx.fillStyle = "#ffcc55";
+                    ctx.font = "bold 15px monospace";
+                    ctx.fillText(e.bossType === "MAJOR" ? "👑" : "⚡", e.x - 13, e.y - 19);
+                }
+                
+                // tank armor lines
+                if(e.type === 'tank') {
+                    ctx.strokeStyle = "#ddddee";
+                    ctx.lineWidth = 3.5;
+                    ctx.beginPath();
+                    ctx.moveTo(e.x - e.radius + 4, e.y - 6);
+                    ctx.lineTo(e.x + e.radius - 4, e.y - 6);
+                    ctx.stroke();
+                }
+                
+                // health bar
+                const hpWidth = (e.health / e.maxHealth) * (e.radius * 2 + 8);
+                ctx.fillStyle = "#2f1e1e";
+                ctx.fillRect(e.x - e.radius - 5, e.y - e.radius - 13, e.radius * 2 + 10, 9);
+                ctx.fillStyle = "#aaffaa";
+                ctx.fillRect(e.x - e.radius - 5, e.y - e.radius - 13, hpWidth, 6);
+                ctx.fillStyle = "#fff3cf";
+                ctx.font = "bold 10px monospace";
+                ctx.fillText(`${Math.ceil(e.health)}`, e.x - 13, e.y - e.radius - 14);
+                
+                // hit flash
+                const flash = hitFlashes.find(f => f.enemy === e);
+                if(flash && flash.timer > 0) {
+                    ctx.globalAlpha = 0.55;
+                    ctx.beginPath();
+                    ctx.arc(e.x, e.y, e.radius + 4, 0, Math.PI * 2);
+                    ctx.fillStyle = "#ffdf80";
+                    ctx.fill();
+                    ctx.globalAlpha = 1;
+                }
+            }
+            
+            // floating numbers
+            for(let i = floatingNumbers.length - 1; i >= 0; i--) {
+                const fn = floatingNumbers[i];
+                ctx.font = "bold 19px monospace";
+                ctx.shadowBlur = 3;
+                ctx.fillStyle = `rgba(255, 225, 90, ${fn.life})`;
+                ctx.fillText(`-${fn.value}`, fn.x - 10, fn.y - 18 * (1 - fn.life));
+                fn.life -= 0.034;
+                if(fn.life <= 0) floatingNumbers.splice(i, 1);
+            }
+            
+            // particles
+            for(let p of particles) {
+                const alpha = Math.max(0.05, p.life / 32);
+                ctx.globalAlpha = alpha;
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            ctx.globalAlpha = 1;
+            
+            // update hit flashes
+            for(let i = hitFlashes.length - 1; i >= 0; i--) {
+                hitFlashes[i].timer--;
+                if(hitFlashes[i].timer <= 0) hitFlashes.splice(i, 1);
+            }
+            
+            // UI overlay
+            ctx.font = "bold 14px 'Courier New'";
+            ctx.fillStyle = "#bbd9ff";
+            ctx.fillText(`🔨 CLICK: ${clickDamage}`, canvas.width - 172, 38);
+            ctx.fillText(`⚙️ TURRET DMG: ${turretDamage}`, canvas.width - 172, 64);
+            ctx.fillText(`🔥 FIRE RATE: ${baseFireRate}fr`, canvas.width - 172, 90);
+            ctx.fillText(`📏 RANGE: ${baseRange}`, canvas.width - 172, 116);
+            ctx.fillText(`🔫 ${turrets.length}/${MAX_TURRETS}`, canvas.width - 172, 142);
+            
+            // wave info
+            if(waveInProgress && gameActive) {
+                ctx.font = "bold 15px monospace";
+                ctx.fillStyle = "#9ed9ff";
+                const remaining = waveRegularRemaining + (waveBossEntity ? 1 : 0);
+                ctx.fillText(`🌊 WAVE ${wave}  |  🧟 REMAINING: ${remaining}`, 22, 52);
+                if(waveBossEntity) {
+                    ctx.fillStyle = "#ffaa66";
+                    ctx.font = "bold 18px monospace";
+                    ctx.fillText(`🔥 ${waveBossEntity.bossType} BOSS ACTIVE 🔥`, canvas.width / 2 - 125, 98);
+                }
+            }
+            
+            // world message
+            if(worldMessage.timer > 0) {
+                ctx.font = "bold 23px 'Segoe UI'";
+                ctx.shadowBlur = 8;
+                ctx.shadowColor = "#000";
+                ctx.fillStyle = "#ffd48a";
+                ctx.textAlign = "center";
+                ctx.fillText(worldMessage.text, canvas.width / 2, 145);
+                ctx.textAlign = "left";
+                worldMessage.timer--;
+            }
+            
+            // placing ghost
+            if(placingMode) {
+                ctx.globalAlpha = 0.48;
+                ctx.shadowBlur = 8;
+                ctx.fillStyle = "#3c5e7a";
+                ctx.fillRect(mouseX - 10, mouseY - 9, 20, 20);
+                ctx.fillStyle = "#77b5e3";
+                ctx.beginPath();
+                ctx.arc(mouseX, mouseY, 10, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1;
+                
+                // ghost range
+                ctx.strokeStyle = 'rgba(180, 255, 255, 0.45)';
+                ctx.lineWidth = 3;
+                ctx.setLineDash([8, 8]);
+                ctx.beginPath();
+                ctx.arc(mouseX, mouseY, baseRange, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
+            
+            // game over
+            if(!gameActive) {
+                ctx.font = "900 46px monospace";
+                ctx.fillStyle = "#ff8877dd";
+                ctx.textAlign = "center";
+                ctx.fillText("GAME OVER", canvas.width / 2, canvas.height / 2 - 45);
+                ctx.font = "bold 19px monospace";
+                ctx.fillStyle = "#ffe6c0";
+                ctx.fillText("PRESS RESTART TO RISE AGAIN", canvas.width / 2, canvas.height / 2 + 32);
+                ctx.textAlign = "left";
+            }
+            
+            ctx.shadowBlur = 0;
+        }
+        
+        // ---------- GAME LOOP ----------
+        function gameLoop() {
+            if(gameActive) {
+                gameFrame++;
+                updateEnemies();
+                updateTurrets();
+                updateProjectiles();
+                updateWaveSpawning();
+                updateParticles();
+                if(baseHealth <= 0) {
+                    gameActive = false;
+                    updateUI();
+                }
+                checkWaveCompletion();
+            }
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+        
+        // ---------- EVENT BINDING ----------
+        function bindEvents() {
+            canvas.addEventListener('click', handleCanvasClick);
+            canvas.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                handleCanvasClick(e);
+            });
+            canvas.addEventListener('mousemove', updateMousePosition);
+            canvas.addEventListener('touchmove', (e) => {
+                if(placingMode) {
+                    e.preventDefault();
+                    updateMousePosition(e);
+                }
+            });
+            
+            document.getElementById('buyTurretBtn').addEventListener('click', buyTurret);
+            document.getElementById('upgradeClickBtn').addEventListener('click', upgradeClickDamage);
+            document.getElementById('upgradeTurretDmgBtn').addEventListener('click', upgradeTurretDamage);
+            document.getElementById('upgradeFireBtn').addEventListener('click', upgradeFireRate);
+            document.getElementById('upgradeRangeBtn').addEventListener('click', upgradeRange);
+            document.getElementById('airstrikeBtn').addEventListener('click', airstrike);
+            document.getElementById('muteBtn').addEventListener('click', toggleMute);
+            document.getElementById('restartBtn').addEventListener('click', restartGame);
+        }
+        
+        function init() {
+            bindEvents();
+            restartGame();
+            gameLoop();
+        }
+        
+        init();
+    })();
+</script>
+</body>
+</html>
