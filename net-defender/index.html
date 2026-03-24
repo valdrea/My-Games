@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NetDefender: System Purge v1.1</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+        
+        body {
+            margin: 0;
+            background-color: #020205;
+            color: #00ffcc;
+            font-family: 'Share Tech Mono', monospace;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        #game-container {
+            position: relative;
+            width: 800px;
+            height: 600px;
+            background: #050510;
+            border: 2px solid #00ffcc;
+            box-shadow: 0 0 20px rgba(0, 255, 204, 0.3);
+            overflow: hidden;
+        }
+
+        canvas { display: block; background: #050510; }
+
+        .overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(5, 5, 16, 0.95);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+
+        .hidden { display: none !important; }
+
+        /* HUD - Top Bar */
+        #hud {
+            position: absolute;
+            top: 0; left: 0; width: 100%;
+            padding: 10px 20px;
+            box-sizing: border-box;
+            display: flex;
+            justify-content: space-between;
+            background: rgba(0, 20, 20, 0.8);
+            border-bottom: 1px solid #004444;
+            z-index: 10;
+            font-size: 1.1rem;
+        }
+
+        /* Management UI - Bottom Bar */
+        #management-ui {
+            position: absolute;
+            bottom: 0; left: 0; width: 100%;
+            height: 100px;
+            background: #0a0a15;
+            border-top: 2px solid #00ffcc;
+            display: flex;
+            align-items: center;
+            justify-content: space-around;
+            padding: 0 10px;
+            box-sizing: border-box;
+            z-index: 10;
+        }
+
+        .tower-shop { display: flex; gap: 15px; }
+        
+        .tower-card {
+            border: 1px solid #004444;
+            padding: 8px;
+            cursor: pointer;
+            text-align: center;
+            width: 100px;
+            background: rgba(0, 255, 204, 0.05);
+            transition: 0.2s;
+        }
+        
+        .tower-card:hover { border-color: #00ffcc; background: rgba(0, 255, 204, 0.1); }
+        .tower-card.selected { border-color: #00ffcc; background: rgba(0, 255, 204, 0.2); box-shadow: 0 0 10px #00ffcc; }
+        .t-name { font-weight: bold; font-size: 0.9rem; }
+        .t-cost { color: #ffcc00; font-size: 0.8rem; }
+
+        .btn {
+            background: #00ffcc;
+            color: #050510;
+            border: none;
+            padding: 12px 24px;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            text-transform: uppercase;
+        }
+        
+        .btn:hover { background: #fff; box-shadow: 0 0 15px #fff; }
+        .stats-box { background: rgba(0, 255, 204, 0.05); padding: 15px; border: 1px solid #004444; margin: 10px; line-height: 1.6; }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <div id="hud" class="hidden">
+        <div>WAVE: <span id="hud-wave">1</span></div>
+        <div style="color:#ff0055">INTEGRITY: <span id="hud-lives">20</span></div>
+        <div style="color:#ffcc00">COINS: <span id="hud-money">150</span></div>
+        <div>SCORE: <span id="hud-score">0</span></div>
+    </div>
+
+    <canvas id="gameCanvas" width="800" height="600"></canvas>
+
+    <div id="screen-menu" class="overlay">
+        <h1 style="font-size: 3rem; text-shadow: 0 0 20px #00ffcc;">NET_DEFENDER v1.1</h1>
+        <div class="stats-box" id="profile-stats">Initializing...</div>
+        <button class="btn" onclick="startGame()">Initialize System</button>
+    </div>
+
+    <div id="management-ui" class="hidden">
+        <div class="tower-shop">
+            <div class="tower-card" onclick="selectTower(0)" id="t-card-0">
+                <div class="t-name" style="color:#0088ff">PULSE</div>
+                <div class="t-cost">$50</div>
+            </div>
+            <div class="tower-card" onclick="selectTower(1)" id="t-card-1">
+                <div class="t-name" style="color:#ff8800">BLAST</div>
+                <div class="t-cost">$120</div>
+            </div>
+            <div class="tower-card" onclick="selectTower(2)" id="t-card-2">
+                <div class="t-name" style="color:#cc00ff">SNIPER</div>
+                <div class="t-cost">$200</div>
+            </div>
+        </div>
+        <div id="build-hint" style="font-size: 0.8rem; color: #888; width: 200px; text-align: center;">
+            Select a Node, then click the grid to build.
+        </div>
+        <button class="btn" style="background: #ff0055; color: white;" onclick="startWave()">Execute Wave</button>
+    </div>
+
+    <div id="screen-summary" class="overlay hidden">
+        <h2 style="color:#00ffcc">WAVE CLEARED</h2>
+        <div class="stats-box" id="wave-stats"></div>
+        <button class="btn" onclick="enterManagement()">Return to Management</button>
+    </div>
+
+    <div id="screen-gameover" class="overlay hidden">
+        <h2 style="color:#ff0055">SYSTEM BREACHED</h2>
+        <div class="stats-box" id="gameover-stats"></div>
+        <button class="btn" onclick="location.reload()">Reboot System</button>
+    </div>
+</div>
+
+<script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const TILE_SIZE = 40;
+    const COLS = 20;
+    const ROWS = 15;
+
+    let state = 'menu';
+    let game = { wave: 1, lives: 20, money: 150, score: 0 };
+    let profile = { kills: 0, highScore: 0 };
+    let towers = [], enemies = [], projectiles = [], particles = [];
+    let selectedTowerIndex = -1;
+    let waypoints = [];
+    let grid = [];
+
+    // Simple Path: Left to Right zigzag
+    const pathCoords = [
+        {x: 0, y: 3}, {x: 15, y: 3}, {x: 15, y: 10}, {x: 3, y: 10}, {x: 3, y: 6}, {x: 20, y: 6}
+    ];
+
+    function init() {
+        // Load Profile
+        const saved = localStorage.getItem('netDef_v1');
+        if (saved) profile = JSON.parse(saved);
+        updateProfileUI();
+
+        // Build Grid and Waypoints
+        grid = Array(ROWS).fill().map(() => Array(COLS).fill(0));
+        waypoints = [];
+        for (let i = 0; i < pathCoords.length - 1; i++) {
+            let start = pathCoords[i];
+            let end = pathCoords[i+1];
+            let curr = {x: start.x, y: start.y};
+            
+            while(curr.x !== end.x || curr.y !== end.y) {
+                if (curr.y < ROWS && curr.x < COLS) grid[curr.y][curr.x] = 1;
+                waypoints.push({x: curr.x * TILE_SIZE + 20, y: curr.y * TILE_SIZE + 20});
+                if (curr.x < end.x) curr.x++;
+                else if (curr.x > end.x) curr.x--;
+                else if (curr.y < end.y) curr.y++;
+                else if (curr.y > end.y) curr.y--;
+            }
+        }
+        // Last node
+        let last = pathCoords[pathCoords.length-1];
+        waypoints.push({x: last.x * TILE_SIZE + 20, y: last.y * TILE_SIZE + 20});
+    }
+
+    function startGame() {
+        document.getElementById('screen-menu').classList.add('hidden');
+        document.getElementById('hud').classList.remove('hidden');
+        enterManagement();
+        requestAnimationFrame(gameLoop);
+    }
+
+    function enterManagement() {
+        state = 'management';
+        document.getElementById('screen-summary').classList.add('hidden');
+        document.getElementById('management-ui').classList.remove('hidden');
+        updateHUD();
+    }
+
+    function startWave() {
+        state = 'playing';
+        document.getElementById('management-ui').classList.add('hidden');
+        enemiesToSpawn = 5 + (game.wave * 2);
+        spawnTimer = 0;
+    }
+
+    function updateHUD() {
+        document.getElementById('hud-wave').innerText = game.wave;
+        document.getElementById('hud-lives').innerText = game.lives;
+        document.getElementById('hud-money').innerText = game.money;
+        document.getElementById('hud-score').innerText = game.score;
+    }
+
+    function updateProfileUI() {
+        document.getElementById('profile-stats').innerText = `Total Malware Purged: ${profile.kills} | High Score: ${profile.highScore}`;
+    }
+
+    // --- Entities ---
+    class Enemy {
+        constructor(wave) {
+            this.wp = 0;
+            this.x = waypoints[0].x;
+            this.y = waypoints[0].y;
+            this.hp = 30 + (wave * 20);
+            this.maxHp = this.hp;
+            this.speed = 60 + (wave * 2);
+            this.color = wave % 3 === 0 ? '#ff0055' : '#00ffcc';
+        }
+        update(dt) {
+            let target = waypoints[this.wp];
+            let dist = Math.hypot(target.x - this.x, target.y - this.y);
+            let move = this.speed * dt;
+            if (dist < move) {
+                this.wp++;
+                if (this.wp >= waypoints.length) {
+                    game.lives--;
+                    this.hp = 0;
+                    if(game.lives <= 0) endGame();
+                    return;
+                }
+            } else {
+                this.x += (target.x - this.x) / dist * move;
+                this.y += (target.y - this.y) / dist * move;
+            }
+        }
+        draw() {
+            ctx.fillStyle = this.color;
+            ctx.shadowBlur = 10; ctx.shadowColor = this.color;
+            ctx.fillRect(this.x - 10, this.y - 10, 20, 20);
+            ctx.shadowBlur = 0;
+            // HP Bar
+            ctx.fillStyle = '#444'; ctx.fillRect(this.x-10, this.y-18, 20, 4);
+            ctx.fillStyle = '#0f0'; ctx.fillRect(this.x-10, this.y-18, 20 * (this.hp/this.maxHp), 4);
+        }
+    }
+
+    const TOWER_TYPES = [
+        {name: 'Pulse', cost: 50, range: 120, dmg: 10, rate: 0.5, color: '#0088ff'},
+        {name: 'Blast', cost: 120, range: 90, dmg: 25, rate: 1.2, color: '#ff8800'},
+        {name: 'Sniper', cost: 200, range: 250, dmg: 80, rate: 2.5, color: '#cc00ff'}
+    ];
+
+    function selectTower(idx) {
+        selectedTowerIndex = idx;
+        document.querySelectorAll('.tower-card').forEach((c, i) => {
+            c.classList.toggle('selected', i === idx);
+        });
+    }
+
+    canvas.addEventListener('click', (e) => {
+        if (state !== 'management' || selectedTowerIndex === -1) return;
+        const rect = canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        const c = Math.floor(x / TILE_SIZE);
+        const r = Math.floor(y / TILE_SIZE);
+
+        if (grid[r] && grid[r][c] === 0 && game.money >= TOWER_TYPES[selectedTowerIndex].cost) {
+            game.money -= TOWER_TYPES[selectedTowerIndex].cost;
+            grid[r][c] = 2;
+            towers.push({
+                x: c * TILE_SIZE + 20, y: r * TILE_SIZE + 20,
+                type: TOWER_TYPES[selectedTowerIndex], cd: 0
+            });
+            updateHUD();
+        }
+    });
+
+    // --- Loop ---
+    let lastTime = Date.now();
+    let enemiesToSpawn = 0;
+    let spawnTimer = 0;
+
+    function gameLoop() {
+        let now = Date.now();
+        let dt = (now - lastTime) / 1000;
+        lastTime = now;
+
+        ctx.fillStyle = '#050510';
+        ctx.fillRect(0, 0, 800, 600);
+
+        // Draw Grid & Path
+        for(let r=0; r<ROWS; r++) {
+            for(let c=0; c<COLS; c++) {
+                if (grid[r][c] === 1) {
+                    ctx.fillStyle = '#101025';
+                    ctx.fillRect(c*TILE_SIZE, r*TILE_SIZE, TILE_SIZE, TILE_SIZE);
+                    ctx.strokeStyle = '#004444';
+                    ctx.strokeRect(c*TILE_SIZE, r*TILE_SIZE, TILE_SIZE, TILE_SIZE);
+                }
+            }
+        }
+
+        if (state === 'playing') {
+            if (enemiesToSpawn > 0) {
+                spawnTimer -= dt;
+                if (spawnTimer <= 0) {
+                    enemies.push(new Enemy(game.wave));
+                    enemiesToSpawn--;
+                    spawnTimer = 0.8;
+                }
+            }
+
+            enemies.forEach(e => e.update(dt));
+            towers.forEach(t => {
+                t.cd -= dt;
+                if (t.cd <= 0) {
+                    let target = enemies.find(e => Math.hypot(e.x - t.x, e.y - t.y) < t.type.range);
+                    if (target) {
+                        target.hp -= t.type.dmg;
+                        t.cd = t.type.rate;
+                        // Draw shot beam
+                        ctx.strokeStyle = t.type.color;
+                        ctx.lineWidth = 3;
+                        ctx.beginPath(); ctx.moveTo(t.x, t.y); ctx.lineTo(target.x, target.y); ctx.stroke();
+                    }
+                }
+            });
+
+            enemies = enemies.filter(e => {
+                if (e.hp <= 0) {
+                    if (e.wp < waypoints.length) {
+                        game.money += 10; game.score += 50; profile.kills++;
+                        updateHUD();
+                    }
+                    return false;
+                }
+                return true;
+            });
+
+            if (enemiesToSpawn === 0 && enemies.length === 0) {
+                state = 'summary';
+                document.getElementById('screen-summary').classList.remove('hidden');
+                document.getElementById('wave-stats').innerText = `Kills this wave: Progressing to Wave ${game.wave + 1}`;
+                game.wave++;
+                localStorage.setItem('netDef_v1', JSON.stringify(profile));
+            }
+        }
+
+        // Draw Everything
+        towers.forEach(t => {
+            ctx.fillStyle = t.type.color;
+            ctx.beginPath(); ctx.arc(t.x, t.y, 15, 0, Math.PI*2); ctx.fill();
+        });
+        enemies.forEach(e => e.draw());
+
+        if (state !== 'gameover') requestAnimationFrame(gameLoop);
+    }
+
+    function endGame() {
+        state = 'gameover';
+        if (game.score > profile.highScore) profile.highScore = game.score;
+        localStorage.setItem('netDef_v1', JSON.stringify(profile));
+        document.getElementById('screen-gameover').classList.remove('hidden');
+        document.getElementById('gameover-stats').innerText = `Score: ${game.score} | Kills: ${profile.kills}`;
+    }
+
+    init();
+</script>
+</body>
+</html>
