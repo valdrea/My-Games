@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Quantum Rift: Arena X - Reforged</title>
+<style>
+  body { margin:0; overflow:hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #000; }
+  #ui {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    color: #00ffcc;
+    background: rgba(0,0,0,0.7);
+    padding: 15px;
+    border-radius: 8px;
+    border: 1px solid #00ffcc;
+    pointer-events: none;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  #crosshair {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 20px;
+    height: 20px;
+    border: 2px solid rgba(0, 255, 204, 0.5);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+  }
+  #shop {
+    display: none;
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: radial-gradient(circle, #1a1a2e 0%, #0f0f1a 100%);
+    color: white;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+  }
+  .upgrade-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; width: 600px; }
+  .upgrade-item {
+    background: #16213e;
+    padding: 15px;
+    border-radius: 5px;
+    border: 1px solid #48abe0;
+    text-align: center;
+  }
+  button {
+    background: #48abe0;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: 0.3s;
+  }
+  button:hover { background: #00fff2; color: #000; }
+  button:disabled { background: #333; cursor: not-allowed; }
+  #instructions {
+    position: absolute;
+    bottom: 20px;
+    width: 100%;
+    text-align: center;
+    color: white;
+    font-size: 0.9em;
+    opacity: 0.7;
+  }
+</style>
+</head>
+<body>
+
+<div id="ui">
+  <div style="font-size: 1.2em; font-weight: bold; margin-bottom: 5px;">Rift Level: <span id="level">1</span></div>
+  <div>Integrity: <span id="health">100</span>%</div>
+  <div>Flux Shards: <span id="shards">0</span></div>
+</div>
+
+<div id="crosshair"></div>
+
+<div id="shop">
+  <h1 style="color: #00ffcc; text-shadow: 0 0 10px #00ffcc;">QUANTUM UPGRADE DEPOT</h1>
+  <p>Available Flux: <span id="currency">0</span></p>
+  <div class="upgrade-grid" id="upgrades"></div>
+  <button onclick="startRun()" style="margin-top:30px; width: 200px; font-size: 1.2em;">ENGAGE NEXT RIFT</button>
+</div>
+
+<div id="instructions">Click to Capture Mouse | WASD to Move | SPACE to Jump | CLICK to Discharge Weapon</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// ============= Configuration & State =============
+let scene, camera, renderer, clock;
+let player, gun;
+let platforms = [], enemies = [], shards = [], projectiles = [];
+let portal = null;
+let state = 'playing';
+let currency = 0, level = 1;
+let upgrades = { maxHealth: 0, damage: 0, jumpForce: 0, speed: 0 };
+const gravity = 28;
+
+// Input state
+let keys = {};
+let pitch = 0, yaw = 0; // Mouse look
+const mouseSensitivity = 0.002;
+
+// ============= Initialization =============
+function init() {
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x050508);
+  scene.fog = new THREE.FogExp2(0x050508, 0.04);
+  
+  camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+  clock = new THREE.Clock();
+
+  renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.shadowMap.enabled = true;
+  document.body.appendChild(renderer.domElement);
+  
+  // Lighting
+  const ambient = new THREE.AmbientLight(0x404040, 1);
+  scene.add(ambient);
+  const sun = new THREE.DirectionalLight(0x00ffcc, 0.8);
+  sun.position.set(5, 10, 7);
+  scene.add(sun);
+
+  // Interaction
+  document.addEventListener('keydown', (e) => keys[e.code] = true);
+  document.addEventListener('keyup', (e) => keys[e.code] = false);
+  document.addEventListener('mousedown', handleClick);
+  document.addEventListener('mousemove', handleMouseMove);
+  window.addEventListener('resize', onWindowResize);
+
+  startRun();
+  animate();
+}
+
+function handleClick() {
+  if (state !== 'playing') return;
+  
+  if (document.pointerLockElement !== document.body) {
+    document.body.requestPointerLock();
+  } else {
+    fireProjectile();
+  }
+}
+
+function handleMouseMove(e) {
+  if (document.pointerLockElement === document.body) {
+    yaw -= e.movementX * mouseSensitivity;
+    pitch -= e.movementY * mouseSensitivity;
+    pitch = Math.max(-Math.PI / 2.2, Math.min(Math.PI / 2.2, pitch));
+  }
+}
+
+// ============= Gameplay Logic =============
+function startRun() {
+  document.getElementById('shop').style.display = 'none';
+  clearLevel();
+  generateLevel();
+  
+  player = {
+    mesh: new THREE.Group(),
+    velocity: new THREE.Vector3(),
+    onGround: false,
+    health: 100 + 50 * upgrades.maxHealth,
+    maxHealth: 100 + 50 * upgrades.maxHealth,
+    damage: 15 + 10 * upgrades.damage,
+    jumpForce: 10 + 1 * upgrades.jumpForce,
+    speed: 7 + 1 * upgrades.speed,
+    radius: 0.6
+  };
+  player.mesh.position.set(0, 2, 0);
+  scene.add(player.mesh);
+
+  // Add a simple Gun mesh to the camera
+  createGun();
+  
+  state = 'playing';
+}
+
+function createGun() {
+  if (gun) scene.remove(gun);
+  const geometry = new THREE.BoxGeometry(0.2, 0.2, 0.8);
+  const material = new THREE.MeshStandardMaterial({ color: 0x333333, emissive: 0x00ffcc, emissiveIntensity: 0.2 });
+  gun = new THREE.Mesh(geometry, material);
+  scene.add(gun);
+}
+
+function fireProjectile() {
+  const geo = new THREE.SphereGeometry(0.1, 8, 8);
+  const mat = new THREE.MeshBasicMaterial({ color: 0x00ffcc });
+  const p = new THREE.Mesh(geo, mat);
+  
+  // Start at gun position
+  p.position.copy(camera.position);
+  p.position.add(new THREE.Vector3(0, -0.2, 0)); // slightly below eyes
+  
+  // Calculate direction
+  const direction = new THREE.Vector3(0, 0, -1);
+  direction.applyQuaternion(camera.quaternion);
+  
+  projectiles.push({
+    mesh: p,
+    velocity: direction.multiplyScalar(35),
+    life: 2.0 // seconds
+  });
+  scene.add(p);
+  
+  // Small Recoil
+  pitch += 0.02;
+}
+
+function updateProjectiles(dt) {
+  for (let i = projectiles.length - 1; i >= 0; i--) {
+    const p = projectiles[i];
+    p.mesh.position.add(p.velocity.clone().multiplyScalar(dt));
+    p.life -= dt;
+
+    // Hit Detection (Enemies)
+    for (let j = enemies.length - 1; j >= 0; j--) {
+      const e = enemies[j];
+      if (p.mesh.position.distanceTo(e.mesh.position) < 1.2) {
+        e.health -= player.damage;
+        p.life = 0; // kill projectile
+        break;
+      }
+    }
+
+    if (p.life <= 0) {
+      scene.remove(p.mesh);
+      projectiles.splice(i, 1);
+    }
+  }
+}
+
+function updatePlayer(dt) {
+  const dir = new THREE.Vector3();
+  if (keys['KeyW']) dir.z -= 1;
+  if (keys['KeyS']) dir.z += 1;
+  if (keys['KeyA']) dir.x -= 1;
+  if (keys['KeyD']) dir.x += 1;
+  
+  dir.normalize();
+  // Rotate move dir to match camera yaw
+  const rotatedDir = dir.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
+  
+  player.velocity.x = rotatedDir.x * player.speed;
+  player.velocity.z = rotatedDir.z * player.speed;
+
+  if (keys['Space'] && player.onGround) {
+    player.velocity.y = player.jumpForce;
+    player.onGround = false;
+  }
+
+  player.velocity.y -= gravity * dt;
+  
+  // Manual Collision
+  const pos = player.mesh.position;
+  pos.x += player.velocity.x * dt;
+  pos.z += player.velocity.z * dt;
+  pos.y += player.velocity.y * dt;
+
+  player.onGround = false;
+  for (let plat of platforms) {
+    if (pos.x > plat.min.x && pos.x < plat.max.x &&
+        pos.z > plat.min.z && pos.z < plat.max.z) {
+      if (pos.y < plat.max.y + 1.6 && pos.y > plat.max.y) {
+        pos.y = plat.max.y + 1.6;
+        player.velocity.y = 0;
+        player.onGround = true;
+      }
+    }
+  }
+
+  if (pos.y < -20) die();
+
+  // Sync Camera and Gun
+  camera.position.copy(pos);
+  camera.rotation.set(pitch, yaw, 0, 'YXZ');
+  
+  // Update Gun Position (Handheld feel)
+  const gunOffset = new THREE.Vector3(0.4, -0.4, -0.8);
+  gunOffset.applyQuaternion(camera.quaternion);
+  gun.position.copy(camera.position).add(gunOffset);
+  gun.quaternion.copy(camera.quaternion);
+}
+
+// ============= World Generation =============
+function generateLevel() {
+  const numPlatforms = 12 + level * 2;
+  let prev = { x: 0, y: 0, z: 0, w: 6, d: 6 };
+  createPlatform(0, 0, 0, 6, 0.5, 6, 0x111122);
+  
+  for (let i = 0; i < numPlatforms; i++) {
+    const w = 4 + Math.random() * 3;
+    const d = 4 + Math.random() * 3;
+    const dist = 6 + Math.random() * 4;
+    const angle = (Math.random() - 0.5) * 1.5;
+    
+    const newX = prev.x + Math.sin(angle) * dist;
+    const newZ = prev.z - Math.cos(angle) * dist;
+    const newY = 0; // Keep it simple but could add height logic
+    
+    createPlatform(newX, newY, newZ, w, 0.5, d, 0x16213e);
+    
+    if (Math.random() > 0.4) createEnemy(newX, newY + 1, newZ);
+    if (Math.random() > 0.3) createShard(newX + (Math.random()-0.5)*2, newY + 1.5, newZ + (Math.random()-0.5)*2);
+    
+    prev = { x: newX, y: newY, z: newZ, w, d };
+  }
+  
+  createPortal(prev.x, 1.5, prev.z);
+}
+
+function createPlatform(x, y, z, w, h, d, color) {
+  const mesh = new THREE.Mesh(
+    new THREE.BoxGeometry(w, h, d),
+    new THREE.MeshStandardMaterial({ color, roughness: 0.8 })
+  );
+  mesh.position.set(x, y, z);
+  mesh.receiveShadow = true;
+  scene.add(mesh);
+  platforms.push({ mesh, min: {x: x-w/2, z: z-d/2}, max: {x: x+w/2, y: y+h/2, z: z+d/2} });
+}
+
+function createEnemy(x, y, z) {
+  const mesh = new THREE.Mesh(
+    new THREE.BoxGeometry(1.2, 1.2, 1.2),
+    new THREE.MeshStandardMaterial({ color: 0xff3300, emissive: 0xff0000, emissiveIntensity: 0.5 })
+  );
+  mesh.position.set(x, y, z);
+  scene.add(mesh);
+  enemies.push({ mesh, health: 30 + level * 10, lastHit: 0 });
+}
+
+function createShard(x, y, z) {
+  const mesh = new THREE.Mesh(
+    new THREE.OctahedronGeometry(0.3),
+    new THREE.MeshStandardMaterial({ color: 0x00ffcc, emissive: 0x00ffcc, emissiveIntensity: 0.5 })
+  );
+  mesh.position.set(x, y, z);
+  scene.add(mesh);
+  shards.push(mesh);
+}
+
+function createPortal(x, y, z) {
+  const geo = new THREE.TorusKnotGeometry(1, 0.3, 100, 16);
+  const mat = new THREE.MeshBasicMaterial({ color: 0x00ffcc, wireframe: true });
+  portal = new THREE.Mesh(geo, mat);
+  portal.position.set(x, y + 2, z);
+  scene.add(portal);
+}
+
+// ============= System Loops =============
+function animate() {
+  requestAnimationFrame(animate);
+  const dt = clock.getDelta();
+
+  if (state === 'playing') {
+    updatePlayer(dt);
+    updateProjectiles(dt);
+    
+    // Update Enemies
+    enemies.forEach((e, i) => {
+      e.mesh.rotation.y += dt;
+      // Simple chase logic
+      const dist = e.mesh.position.distanceTo(player.mesh.position);
+      if (dist < 15) {
+        const moveDir = player.mesh.position.clone().sub(e.mesh.position).normalize();
+        e.mesh.position.add(moveDir.multiplyScalar(dt * 2));
+      }
+      if (dist < 1.5) {
+        const now = performance.now();
+        if (now - e.lastHit > 1000) {
+          player.health -= 15;
+          e.lastHit = now;
+          if (player.health <= 0) die();
+        }
+      }
+      if (e.health <= 0) {
+        scene.remove(e.mesh);
+        enemies.splice(i, 1);
+        currency += 5;
+      }
+    });
+
+    // Shards bobbing
+    shards.forEach((s, i) => {
+      s.rotation.y += dt * 2;
+      s.position.y += Math.sin(Date.now() * 0.005) * 0.005;
+      if (s.position.distanceTo(player.mesh.position) < 2) {
+        currency += 10;
+        scene.remove(s);
+        shards.splice(i, 1);
+      }
+    });
+
+    // Portal logic
+    if (portal) {
+      portal.rotation.x += dt;
+      portal.rotation.y += dt * 0.5;
+      if (portal.position.distanceTo(player.mesh.position) < 3) {
+        level++;
+        currency += 50;
+        startRun();
+      }
+    }
+
+    updateUI();
+  }
+  
+  renderer.render(scene, camera);
+}
+
+function updateUI() {
+  document.getElementById('level').textContent = level;
+  document.getElementById('health').textContent = Math.max(0, Math.floor(player.health));
+  document.getElementById('shards').textContent = currency;
+}
+
+function die() {
+  state = 'dead';
+  document.exitPointerLock();
+  document.getElementById('shop').style.display = 'flex';
+  updateShopUI();
+}
+
+function updateShopUI() {
+  const grid = document.getElementById('upgrades');
+  grid.innerHTML = '';
+  const list = [
+    { k: 'maxHealth', n: 'Hull Integrity', c: 40, d: '+50 Max HP' },
+    { k: 'damage', n: 'Quantum Flux', c: 50, d: '+10 Dmg' },
+    { k: 'jumpForce', n: 'Anti-Grav', c: 30, d: '+1 Jump' },
+    { k: 'speed', n: 'Thrusters', c: 30, d: '+1 Speed' }
+  ];
+  list.forEach(u => {
+    const item = document.createElement('div');
+    item.className = 'upgrade-item';
+    item.innerHTML = `
+      <div style="font-weight:bold">${u.n}</div>
+      <div style="font-size:0.8em; color:#00ffcc; margin:5px 0">${u.d}</div>
+      <button ${currency < u.c ? 'disabled' : ''} onclick="buy('${u.k}', ${u.c})">UPGRADE (${u.c})</button>
+    `;
+    grid.appendChild(item);
+  });
+  document.getElementById('currency').textContent = currency;
+}
+
+function buy(k, c) {
+  currency -= c;
+  upgrades[k]++;
+  updateShopUI();
+}
+
+function clearLevel() {
+  platforms.forEach(p => scene.remove(p.mesh));
+  enemies.forEach(e => scene.remove(e.mesh));
+  shards.forEach(s => scene.remove(s));
+  projectiles.forEach(p => scene.remove(p.mesh));
+  if (portal) scene.remove(portal);
+  platforms = []; enemies = []; shards = []; projectiles = [];
+}
+
+function onWindowResize() {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+}
+
+init();
+</script>
+</body>
+</html>
