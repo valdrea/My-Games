@@ -49,7 +49,7 @@
         @keyframes glitch { 0% { text-shadow: 2px 0 #0ff, -2px 0 #f0f; } 100% { text-shadow: -2px 0 #0ff, 2px 0 #f0f; } }
         button {
             font-family: 'VT323', monospace; font-size: 32px; padding: 12px 40px;
-            background: #000; border: 4px solid #0ff; color: #0ff; cursor: pointer; margin-top: 20px;
+            background: #000; border: 4px solid #0ff; color: #0ff; cursor: pointer; margin: 10px;
         }
         button:hover { background: #0ff; color: #000; }
         
@@ -65,6 +65,17 @@
             font-size: 34px; color: #0ff; text-align: center; background: rgba(0,20,40,0.92);
             padding: 30px 50px; border: 4px solid #0ff; max-width: 620px; line-height: 1.35;
             box-shadow: 0 0 40px #0ff; z-index: 30;
+        }
+
+        #story-popup {
+            display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 720px; background: rgba(0,15,35,0.98); border: 4px solid #0ff; padding: 30px;
+            color: #0ff; font-size: 20px; line-height: 1.4; z-index: 40; box-shadow: 0 0 40px #0ff;
+            max-height: 80vh; overflow-y: auto;
+        }
+        #story-popup h2 { color: #0ff; margin-top: 0; text-align: center; }
+        .close-btn {
+            position: absolute; top: 10px; right: 15px; font-size: 28px; cursor: pointer; color: #ff0;
         }
     </style>
 </head>
@@ -101,10 +112,30 @@
             <h1>VOID PROTOCOL</h1>
             <p style="font-size:28px; margin:20px 0;">YOU ARE THE LAST SURVIVOR<br>ELIMINATE ALL ROGUE UNITS</p>
             <button id="start-button" disabled>LOADING ASSETS...</button>
+            <button onclick="showStory()">THE STORY & GAME INTEL</button>
             <p style="margin-top:40px; font-size:18px;">W/S — MOVE FORWARD/BACK<br>A/D — STRAFE LEFT/RIGHT<br>MOUSE — LOOK AROUND (HORIZONTAL ONLY)<br>CLICK TO LOCK POINTER</p>
             <p style="margin-top:15px; font-size:18px; color:#ff0;">Press <strong>F11</strong> for fullscreen • <strong>G</strong> for GOD MODE (testing)</p>
         </div>
         <div class="scanline"></div>
+    </div>
+
+    <div id="story-popup">
+        <span class="close-btn" onclick="hideStory()">×</span>
+        <h2>THE STORY: VOID PROTOCOL</h2>
+        <p>You awaken to the shrill scream of decompression alarms and the freezing bite of a failing life-support system. Your hyper-sleep was supposed to last until planet-fall, but a malicious digital virus has hijacked the ship’s mainframe, turning the automated crew against you. You are the only thing left standing between the virus and total systems failure.</p>
+        <p>Through your neural-link cybernetics, you can track the infected signatures of the rogue units through solid steel—identifying the corrupted drones by name as you hunt them down floor by floor.</p>
+        <p>Your objective is simple but lethal: purge enough infected bots on each of the ship's four decks to bypass the security lockouts and trigger the teleporter to the next level. If you can survive the climb to the 5th floor, you will face the ship’s final safeguard—the I.C.E. (In Case of Emergency) unit. This massive boss is the heart of the infection. Destroy the I.C.E. unit to purge the virus, regain manual control of the vessel, and finally set a course for home.</p>
+        <p>Watch for dropped power crystals to keep your laser charged and thermal hearts to repair your vitals.</p>
+        
+        <h2>Game Intel</h2>
+        <p>• Decks: 4 Combat Floors + 1 Boss Sub-level.<br>
+           • Hostiles: 10 unique robot variants plus the I.C.E. Boss.<br>
+           • Supplies: Defeated enemies drop Crystals (Laser Ammo) and Hearts (50% Health Heal).<br>
+           • Abilities: Integrated Cyber-Vision (See enemy IDs through walls).</p>
+        
+        <h2>Disclaimer</h2>
+        <p>Development Note: This project was created as an exploration of modern AI capabilities. All game code and visual sprites were 100% AI-generated using Gemini, Grok, Claude, and DeepSeek. All music and sound effects were sourced via Pixabay.</p>
+        <p>Contact: willruss@gmail.com</p>
     </div>
 
     <div id="game-over-screen" style="display:none;">
@@ -142,7 +173,7 @@
         let lootSound = new Audio('assets/loot.ogg');
         let damageSound = new Audio('assets/damage.ogg');
         let deathSound = new Audio('assets/death.ogg');
-        let gameOverSound = new Audio('assets/gameover.ogg');   // ← New sound for failure screen
+        let gameOverSound = new Audio('assets/gameover.ogg');
 
         backgroundMusic.loop = true; backgroundMusic.volume = 0.28;
         bossMusic.loop = true; bossMusic.volume = 0.35;
@@ -158,10 +189,17 @@
         function resumeAudio() {
             if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
         }
-
         function playDeathSound() {
             deathSound.currentTime = 0;
             deathSound.play().catch(() => {});
+        }
+
+        // ====================== STORY POPUP ======================
+        function showStory() {
+            document.getElementById('story-popup').style.display = 'block';
+        }
+        function hideStory() {
+            document.getElementById('story-popup').style.display = 'none';
         }
 
         // ====================== ASSET LOADING ======================
@@ -425,7 +463,7 @@
             return true;
         }
 
-        // ====================== PROJECTILES ======================
+        // ====================== PROJECTILES (with wall blocking) ======================
         function shoot() {
             if (playerCharge < SHOT_COST) return;
             playerCharge -= SHOT_COST;
@@ -435,14 +473,24 @@
             
             const dir = new THREE.Vector3();
             camera.getWorldDirection(dir);
+            const start = camera.position.clone();
+            start.y -= 0.15;
+            
+            // Raycast to see if we hit a wall first
+            const raycaster = new THREE.Raycaster(start, dir);
+            const intersects = raycaster.intersectObjects(wallMeshes);
+            
+            let endPoint = start.clone().addScaledVector(dir, 40);
+            if (intersects.length > 0 && intersects[0].distance < 40) {
+                endPoint = intersects[0].point;
+            }
+            
             const geo = new THREE.SphereGeometry(0.22, 16, 16);
             const mat = new THREE.MeshPhongMaterial({ color: 0x00ffff, emissive: 0x00ffff, emissiveIntensity: 3 });
             const orb = new THREE.Mesh(geo, mat);
-            orb.position.copy(camera.position);
-            orb.position.y -= 0.15;
-            orb.position.addScaledVector(dir, 0.6);
+            orb.position.copy(start);
             scene.add(orb);
-            projectiles.push({ mesh: orb, vel: dir.multiplyScalar(95), life: 1.6 });
+            projectiles.push({ mesh: orb, vel: dir.multiplyScalar(95), life: 1.6, target: endPoint });
         }
         
         function updateProjectiles(delta, time) {
@@ -453,7 +501,7 @@
                 const pulse = 0.85 + Math.sin(time * 18) * 0.25;
                 p.mesh.scale.setScalar(pulse);
                 
-                if (p.life <= 0) {
+                if (p.life <= 0 || p.mesh.position.distanceTo(p.target) < 1) {
                     scene.remove(p.mesh);
                     projectiles.splice(i, 1);
                     continue;
@@ -570,7 +618,7 @@
             gameRunning = false;
             backgroundMusic.pause(); bossMusic.pause();
             document.getElementById('win-screen').style.display = 'flex';
-            document.getElementById('win-score').innerHTML = `FINAL TRANSMISSION<br>SCORE: ${Math.floor(playerScore)}<br>FLOOR: ${playerLevel}`;
+            document.getElementById('win-score').innerHTML = `Congratulations !<br>SCORE: ${Math.floor(playerScore)}<br>FLOOR: ${playerLevel} <br> <p style="margin-top:15px; font-size:20px; color:#ff0;">PRESS <strong>ESC</strong> for Mouse control </p> `;
         }
 
         function endGame() {
@@ -579,7 +627,7 @@
             gameOverSound.currentTime = 0;
             gameOverSound.play();
             document.getElementById('game-over-screen').style.display = 'flex';
-            document.getElementById('final-score').innerHTML = `FINAL TRANSMISSION<br>SCORE: ${Math.floor(playerScore)}<br>FLOOR: ${playerLevel}`;
+            document.getElementById('final-score').innerHTML = `FINAL TRANSMISSION<br>SCORE: ${Math.floor(playerScore)}<br>FLOOR: ${playerLevel} <br> <p style="margin-top:15px; font-size:20px; color:#ff0;">PRESS <strong>ESC</strong> for Mouse control </p> `;
         }
 
         // ====================== UPDATES ======================
