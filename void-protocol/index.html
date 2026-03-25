@@ -129,7 +129,7 @@
             }
         }
 
-        const textureLoader = new THREE.TextureLoader();   // ← THIS WAS MISSING
+        const textureLoader = new THREE.TextureLoader();
 
         const assetUrls = ['assets/gun.png','assets/boss.png','assets/crystal.png','assets/health.png',
             'assets/robot01.png','assets/robot02.png','assets/robot03.png','assets/robot04.png',
@@ -158,7 +158,7 @@
         const healthTexture = textureLoader.load('assets/health.png');
         const crystalTexture = textureLoader.load('assets/crystal.png');
 
-        // ====================== CONSTANTS & GAME VARS ======================
+        // ====================== CONSTANTS ======================
         const CELL_SIZE = 2.4, PLAYER_RADIUS = 0.35, MOUSE_SENSITIVITY = 0.0025, MOVE_SPEED = 14;
         const MAX_CHARGE = 100, SHOT_COST = 4, ENEMY_HIT_RADIUS = 1.2, BOSS_HIT_RADIUS = 1.5;
         const ENEMY_SPRITE_SCALE = 1.61, BOSS_SPRITE_SCALE = 2.53;
@@ -175,82 +175,225 @@
         const gunSprite = document.getElementById('gun-sprite');
         function addGunShake(){ if(!gunSprite) return; gunSprite.classList.add('gun-shake'); setTimeout(()=>gunSprite.classList.remove('gun-shake'),60); }
 
-        // (All the rest of the game functions are identical to the previous working version)
-        // generateMaze, createWalls, createFloorAndCeiling, addCorridorLights, getRandomOpenCell,
-        // spawnEnemies, spawnBoss, spawnCrystalAt, spawnHealthAt, isValidPosition, shoot (with wall raycast),
-        // updateProjectiles, resolveEnemyCollisions, showClearedPopup, nextFloor, winGame, endGame,
-        // updateMovement, updateEnemies, updatePickups, updateHUD, toggleGodMode, animate, setupControls,
-        // startGame, restartGame — all included below.
-
+        // ====================== MAZE ======================
         function generateMaze(w,h){ const grid=Array.from({length:h},()=>Array(w).fill(1));
             function carve(x,y){ grid[y][x]=0; const dirs=[[2,0],[-2,0],[0,2],[0,-2]]; dirs.sort(()=>Math.random()-0.5);
                 for(let [dx,dy] of dirs){ const nx=x+dx,ny=y+dy; if(nx>0&&nx<w-1&&ny>0&&ny<h-1&&grid[ny][nx]===1){ grid[y+dy/2][x+dx/2]=0; carve(nx,ny); } } }
             carve(1,1); return grid; }
 
-        function createWalls(){ /* same as before */ wallMeshes.forEach(w=>scene.remove(w)); wallMeshes=[]; 
+        function createWalls(){ wallMeshes.forEach(w=>scene.remove(w)); wallMeshes=[]; 
             const geo=new THREE.BoxGeometry(CELL_SIZE,3.2,CELL_SIZE), mat=new THREE.MeshPhongMaterial({color:0x334455,shininess:10});
             for(let z=0;z<MAZE_SIZE;z++)for(let x=0;x<MAZE_SIZE;x++)if(maze[z][x]===1){
                 const wall=new THREE.Mesh(geo,mat); wall.position.set(x*CELL_SIZE+CELL_SIZE/2,1.6,z*CELL_SIZE+CELL_SIZE/2);
                 scene.add(wall); wallMeshes.push(wall); } }
 
-        function createFloorAndCeiling(){ /* same */ if(floorMesh)scene.remove(floorMesh); if(ceilingMesh)scene.remove(ceilingMesh);
+        function createFloorAndCeiling(){ if(floorMesh)scene.remove(floorMesh); if(ceilingMesh)scene.remove(ceilingMesh);
             const size=(MAZE_SIZE+8)*CELL_SIZE;
             floorMesh=new THREE.Mesh(new THREE.PlaneGeometry(size,size),new THREE.MeshPhongMaterial({color:0x112233,shininess:5}));
             floorMesh.rotation.x=-Math.PI/2; floorMesh.position.y=0.01; scene.add(floorMesh);
             ceilingMesh=new THREE.Mesh(new THREE.PlaneGeometry(size,size),new THREE.MeshPhongMaterial({color:0x223344,shininess:10}));
             ceilingMesh.rotation.x=Math.PI/2; ceilingMesh.position.y=3.2; scene.add(ceilingMesh); }
 
-        function addCorridorLights(){ /* same */ corridorLights.forEach(l=>scene.remove(l)); corridorLights=[];
+        function addCorridorLights(){ corridorLights.forEach(l=>scene.remove(l)); corridorLights=[];
             for(let z=2;z<MAZE_SIZE-2;z+=3)for(let x=2;x<MAZE_SIZE-2;x+=3)if(maze[z][x]===0){
                 const light=new THREE.PointLight(0x77ddff,2.4,20); light.position.set(x*CELL_SIZE+CELL_SIZE/2,2.9,z*CELL_SIZE+CELL_SIZE/2);
                 scene.add(light); corridorLights.push(light);
                 const lamp=new THREE.Mesh(new THREE.BoxGeometry(0.4,0.2,0.4),new THREE.MeshPhongMaterial({color:0x99eeff,emissive:0x77ddff}));
                 lamp.position.copy(light.position); lamp.position.y=2.85; scene.add(lamp); corridorLights.push(lamp); } }
 
-        function getRandomOpenCell(){ /* same */ const open=[]; for(let z=1;z<MAZE_SIZE-1;z++)for(let x=1;x<MAZE_SIZE-1;x++)if(maze[z][x]===0&&Math.abs(x-1)+Math.abs(z-1)>6) open.push({x:x*CELL_SIZE+CELL_SIZE/2,z:z*CELL_SIZE+CELL_SIZE/2}); return open[Math.floor(Math.random()*open.length)]; }
+        // ====================== ENTITIES ======================
+        function getRandomOpenCell(){ const open=[]; for(let z=1;z<MAZE_SIZE-1;z++)for(let x=1;x<MAZE_SIZE-1;x++)if(maze[z][x]===0&&Math.abs(x-1)+Math.abs(z-1)>6) open.push({x:x*CELL_SIZE+CELL_SIZE/2,z:z*CELL_SIZE+CELL_SIZE/2}); return open[Math.floor(Math.random()*open.length)]; }
 
-        function spawnEnemies(count){ /* same as previous working version */ /* ... */ }
-        function spawnBoss(){ /* same */ }
-        function spawnCrystalAt(x,z){ /* same */ }
-        function spawnHealthAt(x,z){ /* same */ }
-        function isValidPosition(x,z){ /* same */ }
-        function shoot(){ /* with wall raycast */ if(playerCharge<SHOT_COST)return; playerCharge-=SHOT_COST; updateHUD(); laserSound.currentTime=0; laserSound.play(); addGunShake();
+        function spawnEnemies(count){ enemies.forEach(e=>scene.remove(e.sprite)); enemies=[];
+            for(let i=0;i<count;i++){ const pos=getRandomOpenCell(); if(!pos) continue;
+                const texture=enemyTextures[nextEnemyTextureIndex%enemyTextures.length]; nextEnemyTextureIndex++;
+                const material=new THREE.SpriteMaterial({map:texture,transparent:true,color:0xffffff});
+                const sprite=new THREE.Sprite(material); const baseY=1.2;
+                sprite.position.set(pos.x,baseY,pos.z); sprite.scale.set(ENEMY_SPRITE_SCALE,ENEMY_SPRITE_SCALE,1); scene.add(sprite);
+                const hpGeo=new THREE.BoxGeometry(1.4,0.14,0.08), hpMat=new THREE.MeshPhongMaterial({color:0x00ff44});
+                const hpBar=new THREE.Mesh(hpGeo,hpMat); hpBar.position.set(0,1.2,0); sprite.add(hpBar);
+                const nameText=String.fromCharCode(65+Math.random()*26|0)+String.fromCharCode(65+Math.random()*26|0)+(100+Math.random()*900|0)+'-'+String.fromCharCode(65+Math.random()*26|0);
+                const canvas=document.createElement('canvas'); canvas.width=256; canvas.height=64;
+                const ctx=canvas.getContext('2d'); ctx.fillStyle='#00ffff'; ctx.font='bold 32px VT323, monospace'; ctx.textAlign='center';
+                ctx.shadowColor='#00ffff'; ctx.shadowBlur=12; ctx.fillText(nameText,128,44);
+                const nameTex=new THREE.CanvasTexture(canvas);
+                const namePlate=new THREE.Sprite(new THREE.SpriteMaterial({map:nameTex,depthTest:false,transparent:true}));
+                namePlate.scale.set(2.2,0.55,1); namePlate.position.set(0,1.4,0); sprite.add(namePlate);
+                enemies.push({sprite,hpBar,namePlate,maxHp:25+playerLevel*18,hp:25+playerLevel*18,speed:2.8+playerLevel*0.7,lastAttack:0,isBoss:false,baseY,bobOffset:Math.random()*Math.PI*2,isMoving:false,walkPhase:Math.random()*Math.PI*2}); } }
+
+        function spawnBoss(){ enemies.forEach(e=>scene.remove(e.sprite)); enemies=[];
+            const material=new THREE.SpriteMaterial({map:bossTexture,transparent:true,color:0xffffff});
+            const sprite=new THREE.Sprite(material); const pos=getRandomOpenCell(); const baseY=1.6;
+            sprite.position.set(pos.x,baseY,pos.z); sprite.scale.set(BOSS_SPRITE_SCALE,BOSS_SPRITE_SCALE,1); scene.add(sprite);
+            const hpGeo=new THREE.BoxGeometry(2.2,0.18,0.1), hpMat=new THREE.MeshPhongMaterial({color:0x00ff44});
+            const hpBar=new THREE.Mesh(hpGeo,hpMat); hpBar.position.set(0,1.5,0); sprite.add(hpBar);
+            const canvas=document.createElement('canvas'); canvas.width=256; canvas.height=64;
+            const ctx=canvas.getContext('2d'); ctx.fillStyle='#ffaa44'; ctx.font='bold 36px VT323, monospace'; ctx.textAlign='center';
+            ctx.fillText("I.C.E.",128,44);
+            const tex=new THREE.CanvasTexture(canvas);
+            const namePlate=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,depthTest:false,transparent:true}));
+            namePlate.scale.set(2.8,0.7,1); namePlate.position.set(0,1.9,0); sprite.add(namePlate);
+            enemies.push({sprite,hpBar,namePlate,maxHp:650,hp:650,speed:3.8,lastAttack:0,isBoss:true,baseY,bobOffset:Math.random()*Math.PI*2,isMoving:false,walkPhase:Math.random()*Math.PI*2}); }
+
+        function spawnCrystalAt(x,z){ const material=new THREE.SpriteMaterial({map:crystalTexture,transparent:true});
+            const sprite=new THREE.Sprite(material); sprite.position.set(x,0.8,z); sprite.scale.set(0.8,0.8,1); scene.add(sprite);
+            crystals.push({sprite,originalY:0.8,bobSpeed:1.5}); }
+        function spawnHealthAt(x,z){ const material=new THREE.SpriteMaterial({map:healthTexture,transparent:true});
+            const sprite=new THREE.Sprite(material); sprite.position.set(x,0.9,z); sprite.scale.set(0.8,0.8,1); scene.add(sprite);
+            healthPickups.push({sprite,originalY:0.9,bobSpeed:1.5}); }
+
+        // ====================== COLLISION & SHOOTING ======================
+        function isValidPosition(x,z){ const min=CELL_SIZE*0.35, max=(MAZE_SIZE-0.35)*CELL_SIZE;
+            if(x<min||x>max||z<min||z>max) return false;
+            const r=PLAYER_RADIUS; const checks=[[x-r,z-r],[x-r,z+r],[x+r,z-r],[x+r,z+r]];
+            for(let [cx,cz] of checks){ const gx=Math.floor(cx/CELL_SIZE), gz=Math.floor(cz/CELL_SIZE);
+                if(gx<0||gx>=MAZE_SIZE||gz<0||gz>=MAZE_SIZE||maze[gz][gx]===1) return false; }
+            return true; }
+
+        function shoot(){ if(playerCharge<SHOT_COST) return; playerCharge-=SHOT_COST; updateHUD(); laserSound.currentTime=0; laserSound.play(); addGunShake();
             const dir=new THREE.Vector3(); camera.getWorldDirection(dir); const start=camera.position.clone(); start.y-=0.15;
             const ray=new THREE.Raycaster(start,dir); const hits=ray.intersectObjects(wallMeshes);
             let end=start.clone().addScaledVector(dir,40); if(hits.length>0&&hits[0].distance<40) end=hits[0].point;
             const geo=new THREE.SphereGeometry(0.22,16,16), mat=new THREE.MeshPhongMaterial({color:0x00ffff,emissive:0x00ffff,emissiveIntensity:3});
             const orb=new THREE.Mesh(geo,mat); orb.position.copy(start); scene.add(orb);
-            projectiles.push({mesh:orb,vel:dir.multiplyScalar(95),life:1.6,target:end}); }
+            projectiles.push({mesh:orb,vel:dir.multiplyScalar(95),life:1.6}); }
 
-        function updateProjectiles(delta,time){ /* same as before with wall target */ /* ... */ }
-        function resolveEnemyCollisions(){ /* same */ }
-        function showClearedPopup(){ /* same */ }
-        function nextFloor(){ /* same */ }
-        function winGame(){ /* same */ }
-        function endGame(){ /* same */ }
-        function updateMovement(delta){ /* same */ }
-        function updateEnemies(delta,time){ /* same */ }
-        function updatePickups(delta,time){ /* same */ }
-        function updateHUD(){ /* same */ }
-        function toggleGodMode(){ /* same */ }
+        function updateProjectiles(delta,time){ for(let i=projectiles.length-1;i>=0;i--){ const p=projectiles[i];
+            p.mesh.position.addScaledVector(p.vel,delta); p.life-=delta;
+            const pulse=0.85+Math.sin(time*18)*0.25; p.mesh.scale.setScalar(pulse);
+            if(p.life<=0){ scene.remove(p.mesh); projectiles.splice(i,1); continue; }
+            let hit=false; for(let j=enemies.length-1;j>=0;j--){ const e=enemies[j];
+                const hitRadius=e.isBoss?BOSS_HIT_RADIUS:ENEMY_HIT_RADIUS; const dist=p.mesh.position.distanceTo(e.sprite.position);
+                if(dist<hitRadius){ e.hp-=currentDamage; e.sprite.material.color.setHex(0xff8888);
+                    setTimeout(()=>{if(e.sprite)e.sprite.material.color.setHex(0xffffff);},80);
+                    if(e.hp<=0){ if(Math.random()<0.25) spawnHealthAt(e.sprite.position.x,e.sprite.position.z); spawnCrystalAt(e.sprite.position.x,e.sprite.position.z);
+                        scene.remove(e.sprite); enemies.splice(j,1); playDeathSound(); playerScore+=120+playerLevel*30; kills++;
+                        updateHUD(); if(kills>=killGoal&&!transitioning){ if(playerLevel===5) winGame(); else showClearedPopup(); } }
+                    else e.hpBar.scale.x=e.hp/e.maxHp;
+                    scene.remove(p.mesh); projectiles.splice(i,1); hit=true; break; } } if(hit) continue; } }
 
+        function resolveEnemyCollisions(){ for(let i=0;i<enemies.length;i++) for(let j=i+1;j<enemies.length;j++){
+            const a=enemies[i].sprite.position, b=enemies[j].sprite.position;
+            const dx=a.x-b.x, dz=a.z-b.z, dist=Math.hypot(dx,dz);
+            if(dist<1.3&&dist>0.01){ const push=(1.3-dist)*1.2, px=(dx/dist)*push, pz=(dz/dist)*push;
+                if(isValidPosition(a.x+px*0.5,a.z)) a.x+=px*0.5; if(isValidPosition(a.x,a.z+pz*0.5)) a.z+=pz*0.5;
+                if(isValidPosition(b.x-px*0.5,b.z)) b.x-=px*0.5; if(isValidPosition(b.x,b.z-pz*0.5)) b.z-=pz*0.5; } } }
+
+        // ====================== FLOOR & GAME STATE ======================
+        function showClearedPopup(){ if(transitioning) return; transitioning=true; isPaused=true;
+            const popup=document.getElementById('floor-cleared'); popup.style.display='block';
+            setTimeout(()=>{ popup.style.display='none'; isPaused=false; transitioning=false; nextFloor(); },2800); }
+
+        function nextFloor(){ playerLevel++; kills=0;
+            if(playerLevel===5){ backgroundMusic.pause(); bossMusic.currentTime=0; bossMusic.play(); }
+            wallMeshes.forEach(w=>scene.remove(w)); enemies.forEach(e=>scene.remove(e.sprite)); crystals.forEach(c=>scene.remove(c.sprite));
+            healthPickups.forEach(h=>scene.remove(h.sprite)); projectiles.forEach(p=>scene.remove(p.mesh)); corridorLights.forEach(l=>scene.remove(l));
+            if(floorMesh)scene.remove(floorMesh); if(ceilingMesh)scene.remove(ceilingMesh);
+            wallMeshes=[]; enemies=[]; crystals=[]; healthPickups=[]; projectiles=[]; corridorLights=[];
+            if(playerLevel===5){ MAZE_SIZE=17; killGoal=1; maze=generateMaze(MAZE_SIZE,MAZE_SIZE); createWalls(); createFloorAndCeiling(); addCorridorLights(); spawnBoss(); currentDamage+=8; }
+            else{ MAZE_SIZE=Math.min(11+playerLevel*2,25); killGoal=3+playerLevel*3; maze=generateMaze(MAZE_SIZE,MAZE_SIZE); createWalls(); createFloorAndCeiling(); addCorridorLights(); spawnEnemies(killGoal+3); currentDamage+=8; }
+            camera.position.set(CELL_SIZE*1+CELL_SIZE/2,1.65,CELL_SIZE*1+CELL_SIZE/2); yaw=3*Math.PI/4; camera.rotation.set(pitch,yaw,0); updateHUD(); }
+
+        function winGame(){ gameRunning=false; backgroundMusic.pause(); bossMusic.pause();
+            document.getElementById('win-screen').style.display='flex';
+            document.getElementById('win-score').innerHTML=`FINAL TRANSMISSION<br>SCORE: ${Math.floor(playerScore)}<br>FLOOR: ${playerLevel}`; }
+
+        function endGame(){ gameRunning=false; backgroundMusic.pause(); bossMusic.pause();
+            gameOverSound.currentTime=0; gameOverSound.play();
+            document.getElementById('game-over-screen').style.display='flex';
+            document.getElementById('final-score').innerHTML=`FINAL TRANSMISSION<br>SCORE: ${Math.floor(playerScore)}<br>FLOOR: ${playerLevel}`; }
+
+        // ====================== UPDATES ======================
+        function updateMovement(delta){ if(isPaused) return;
+            const forward=new THREE.Vector3(0,0,-1).applyQuaternion(camera.quaternion); forward.y=0; forward.normalize();
+            const right=new THREE.Vector3(1,0,0).applyQuaternion(camera.quaternion); right.y=0; right.normalize();
+            let move=new THREE.Vector3();
+            if(keys['w']) move.add(forward); if(keys['s']) move.sub(forward);
+            if(keys['a']) move.sub(right); if(keys['d']) move.add(right);
+            if(move.length()>0) move.normalize();
+            const speed=MOVE_SPEED*delta; const dx=move.x*speed, dz=move.z*speed;
+            const newX=camera.position.x+dx, newZ=camera.position.z+dz;
+            if(isValidPosition(newX,camera.position.z)) camera.position.x=newX;
+            if(isValidPosition(camera.position.x,newZ)) camera.position.z=newZ; }
+
+        function updateEnemies(delta,time){ if(isPaused) return;
+            const p=camera.position; for(let i=enemies.length-1;i>=0;i--){ const e=enemies[i]; const ep=e.sprite.position;
+                const dx=p.x-ep.x, dz=p.z-ep.z, dist=Math.hypot(dx,dz); e.isMoving=dist>0.8;
+                if(e.isMoving){ const nx=ep.x+(dx/dist)*e.speed*delta, nz=ep.z+(dz/dist)*e.speed*delta;
+                    if(isValidPosition(nx,ep.z)) ep.x=nx; if(isValidPosition(ep.x,nz)) ep.z=nz;
+                    e.walkPhase+=delta*(e.isBoss?BOSS_BOUNCE_SPEED:WALK_BOUNCE_SPEED); }
+                if(e.isMoving){ const bh=e.isBoss?BOSS_BOUNCE_HEIGHT:WALK_BOUNCE_HEIGHT; ep.y=e.baseY+Math.abs(Math.sin(e.walkPhase))*bh; }
+                else ep.y+=(e.baseY-ep.y)*Math.min(1,delta*8);
+                e.hpBar.lookAt(camera.position); e.namePlate.lookAt(camera.position);
+                if(dist<1.8&&time-e.lastAttack>1.05){ if(!godMode){ playerHealth=Math.max(0,playerHealth-(12+playerLevel*2)); damageSound.currentTime=0; damageSound.play(); }
+                    e.lastAttack=time; updateHUD(); if(!godMode&&playerHealth<=0) endGame(); } }
+            resolveEnemyCollisions(); }
+
+        function updatePickups(delta,time){ if(isPaused) return;
+            for(let i=crystals.length-1;i>=0;i--){ const c=crystals[i]; c.sprite.position.y=c.originalY+Math.sin(time*c.bobSpeed)*0.1;
+                const d=Math.hypot(camera.position.x-c.sprite.position.x,camera.position.z-c.sprite.position.z);
+                if(d<1.2){ playerCharge=Math.min(MAX_CHARGE,playerCharge+50); playerScore+=35; lootSound.currentTime=0; lootSound.play(); scene.remove(c.sprite); crystals.splice(i,1); updateHUD(); } }
+            for(let i=healthPickups.length-1;i>=0;i--){ const h=healthPickups[i]; h.sprite.position.y=h.originalY+Math.sin(time*h.bobSpeed)*0.1;
+                const d=Math.hypot(camera.position.x-h.sprite.position.x,camera.position.z-h.sprite.position.z);
+                if(d<1.2){ playerHealth=Math.min(100,playerHealth+50); playerScore+=60; lootSound.currentTime=0; lootSound.play(); scene.remove(h.sprite); healthPickups.splice(i,1); updateHUD(); } } }
+
+        function updateHUD(){ document.getElementById('health-inner').style.width=playerHealth+'%';
+            document.getElementById('ammo-inner').style.width=playerCharge+'%';
+            document.getElementById('floor-level').textContent=String(playerLevel).padStart(2,'0');
+            document.getElementById('kills').textContent=String(kills).padStart(2,'0');
+            document.getElementById('goal').textContent=String(killGoal).padStart(2,'0');
+            document.getElementById('score').textContent=String(Math.floor(playerScore)).padStart(6,'0');
+            document.getElementById('player-level').textContent=String(playerLevel).padStart(2,'0');
+            document.getElementById('godmode-indicator').style.display=(godMode&&gameRunning)?'block':'none'; }
+
+        function toggleGodMode(){ godMode=!godMode; updateHUD(); }
+
+        // ====================== GAME LOOP ======================
         function animate(){ requestAnimationFrame(animate); const delta=Math.min(clock.getDelta(),0.1), time=clock.getElapsedTime();
             if(gameRunning&&isLocked&&!isPaused){ updateMovement(delta); updateEnemies(delta,time); updatePickups(delta,time); updateProjectiles(delta,time);
                 if(playerCharge<MAX_CHARGE) playerCharge+=delta*3; updateHUD(); camera.rotation.z=0; }
             renderer.render(scene,camera); }
 
-        function setupControls(){ /* same as before */ /* ... */ }
+        function setupControls(){
+            window.addEventListener('keydown',e=>{ keys[e.key.toLowerCase()]=true; if(e.key.toLowerCase()==='g'&&gameRunning) toggleGodMode(); });
+            window.addEventListener('keyup',e=>{ keys[e.key.toLowerCase()]=false; });
+            document.addEventListener('mousemove',e=>{ if(!isLocked||!gameRunning||isPaused) return; yaw-=e.movementX*MOUSE_SENSITIVITY; camera.rotation.set(pitch,yaw,0); });
+            renderer.domElement.addEventListener('mousedown',e=>{ if(e.button===0&&isLocked&&gameRunning&&!isPaused) shoot(); });
+            renderer.domElement.addEventListener('click',()=>{ if(!isLocked){ renderer.domElement.requestPointerLock(); resumeAudio(); } });
+            document.addEventListener('pointerlockchange',()=>{ isLocked=document.pointerLockElement===renderer.domElement; });
+        }
 
-        function startGame(){ /* same */ /* ... */ }
+        function startGame(){
+            document.getElementById('start-screen').style.display='none';
+            document.getElementById('game-over-screen').style.display='none';
+            document.getElementById('win-screen').style.display='none';
+            document.getElementById('floor-cleared').style.display='none';
+            hideStory();
+            initAudio(); resumeAudio(); backgroundMusic.play();
+            MAZE_SIZE=11; maze=generateMaze(MAZE_SIZE,MAZE_SIZE); createWalls(); createFloorAndCeiling(); addCorridorLights();
+            killGoal=6; nextEnemyTextureIndex=0; spawnEnemies(9); currentDamage=28;
+            playerHealth=100; playerCharge=100; playerScore=0; playerLevel=1; kills=0;
+            isPaused=false; transitioning=false; godMode=false;
+            camera.position.set(CELL_SIZE*1+CELL_SIZE/2,1.65,CELL_SIZE*1+CELL_SIZE/2); yaw=3*Math.PI/4; camera.rotation.set(pitch,yaw,0);
+            updateHUD(); gameRunning=true; setTimeout(()=>{ renderer.domElement.requestPointerLock(); },150); }
 
-        function restartGame(){ /* same */ /* ... */ }
+        function restartGame(){
+            backgroundMusic.pause(); bossMusic.pause(); backgroundMusic.currentTime=0;
+            document.getElementById('game-over-screen').style.display='none';
+            document.getElementById('win-screen').style.display='none';
+            document.getElementById('floor-cleared').style.display='none';
+            hideStory();
+            wallMeshes.forEach(w=>scene.remove(w)); enemies.forEach(e=>scene.remove(e.sprite)); crystals.forEach(c=>scene.remove(c.sprite));
+            healthPickups.forEach(h=>scene.remove(h.sprite)); projectiles.forEach(p=>scene.remove(p.mesh)); corridorLights.forEach(l=>scene.remove(l));
+            if(floorMesh)scene.remove(floorMesh); if(ceilingMesh)scene.remove(ceilingMesh);
+            startGame(); }
 
         window.addEventListener('resize',()=>{ camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth,innerHeight); });
 
         setupControls();
         animate();
 
-        // FINAL CLICK HANDLER (now guaranteed to run)
+        // FINAL BUTTON HANDLER
         document.getElementById('start-button').addEventListener('click', () => {
             if (!document.getElementById('start-button').disabled) startGame();
         });
