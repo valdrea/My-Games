@@ -209,9 +209,9 @@
             storySound.pause();
         }
 
-        // ====================== ASSET LOADING (15 total assets) ======================
+        // ====================== ASSET LOADING ======================
         let loadedAssets = 0;
-        const totalAssets = 15; // 14 images + 1 story audio
+        const totalAssets = 15; // 14 images + story.ogg
 
         function assetLoaded() {
             loadedAssets++;
@@ -241,7 +241,7 @@
             img.src = url;
         });
 
-        // Load story.ogg (the big file)
+        // Load story.ogg
         storySound.addEventListener('canplaythrough', assetLoaded, { once: true });
         storySound.addEventListener('error', () => {
             console.error("Failed to load story.ogg");
@@ -304,7 +304,7 @@
             setTimeout(() => gunSprite.classList.remove('gun-shake'), 60);
         }
 
-        // ====================== MAZE, ENTITIES, COLLISION, PROJECTILES, etc. ======================
+        // ====================== MAZE & WORLD ======================
         function generateMaze(w, h) {
             const grid = Array.from({ length: h }, () => Array(w).fill(1));
             function carve(x, y) {
@@ -851,10 +851,11 @@
         setupControls();
         animate();
         
+        // Attach click handler after everything is loaded
         const startButton = document.getElementById('start-button');
-        startButton.onclick = () => {
+        startButton.addEventListener('click', () => {
             if (!startButton.disabled) startGame();
-        };
+        });
     </script>
 </body>
 </html>
