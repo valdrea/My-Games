@@ -76,6 +76,8 @@
             transition: all 0.3s ease;
             position: relative;
             overflow: hidden;
+            display: flex;
+            flex-direction: column;
         }
 
         .game-card:hover {
@@ -88,7 +90,7 @@
             width: 100%;
             height: 200px;
             position: relative;
-            background: #000;
+            background: #111;
             border-bottom: 2px solid var(--neon-blue);
         }
 
@@ -98,7 +100,7 @@
             width: 100%; height: 100%;
             object-fit: cover;
             opacity: 0;
-            transition: opacity 1s ease-in-out;
+            transition: opacity 0.8s ease-in-out;
             image-rendering: pixelated;
         }
 
@@ -107,31 +109,30 @@
         }
 
         .game-info {
-            padding: 15px;
+            padding: 20px;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
         }
 
         .game-title {
             font-size: 2.2rem;
             text-transform: uppercase;
             color: var(--neon-blue);
-            margin: 5px 0;
-        }
-
-        /* Button Styles */
-        .btn-group {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            margin-top: 10px;
+            margin-bottom: 15px;
+            letter-spacing: 2px;
         }
 
         .btn {
-            padding: 8px;
+            display: block;
+            padding: 10px;
             text-decoration: none;
-            font-size: 1.2rem;
-            border: 1px solid var(--neon-blue);
+            font-size: 1.3rem;
+            border: 2px solid var(--neon-blue);
             color: var(--neon-blue);
             transition: 0.2s;
+            margin-top: 5px;
         }
 
         .btn:hover {
@@ -160,7 +161,7 @@
         [ ACCESS COMMUNITY FORUM / REPORT BUGS ]
     </a>
 
-    <div id="status">SCANNING DIRECTORIES...</div>
+    <div id="status">INITIALIZING DIRECTORY SCAN...</div>
     <div id="game-container"></div>
 
     <script>
@@ -172,54 +173,67 @@
             const status = document.getElementById('status');
 
             try {
+                // Fetch the main repository folders
                 const response = await fetch(`https://api.github.com/repos/${USERNAME}/${REPO}/contents/`);
-                const data = await response.json();
+                const items = await response.json();
+                
                 status.style.display = 'none';
-                const folders = data.filter(item => item.type === 'dir');
+                const folders = items.filter(item => item.type === 'dir' && item.name !== 'Output');
 
-                folders.forEach(folder => {
+                for (const folder of folders) {
+                    // Check the contents of EACH folder to see what buttons to show
+                    const contentResponse = await fetch(folder.url);
+                    const contents = await contentResponse.json();
+                    
+                    const hasWeb = contents.some(file => file.name === 'index.html');
+                    const hasInstaller = contents.some(file => file.name === 'Installer.exe');
+
                     const card = document.createElement('div');
                     card.className = 'game-card';
 
-                    // We assume folders contain preview1.png, preview2.png, preview3.png
-                    // and an installer file named "Installer.exe"
+                    // Build the Button HTML based on what we found
+                    let buttonHTML = '';
+                    if (hasWeb) {
+                        buttonHTML = `<a href="./${folder.name}/index.html" class="btn">[ PLAY WEB VERSION ]</a>`;
+                    } else if (hasInstaller) {
+                        buttonHTML = `<a href="./${folder.name}/Installer.exe" class="btn btn-download">[ DOWNLOAD INSTALLER ]</a>`;
+                    } else {
+                        buttonHTML = `<div style="color:#666; font-size:0.9rem;">[ NO BOOTABLE MEDIA FOUND ]</div>`;
+                    }
+
                     card.innerHTML = `
                         <div class="slideshow" id="slideshow-${folder.name}">
-                            <img class="active" src="./${folder.name}/preview1.png" onerror="this.src='https://placehold.co/400x250/000/0ff?text=PREVIEW+1'">
+                            <img class="active" src="./${folder.name}/preview.png" onerror="this.src='https://placehold.co/400x250/000/0ff?text=PREVIEW'">
+                            <img src="./${folder.name}/preview1.png" onerror="this.style.display='none'">
                             <img src="./${folder.name}/preview2.png" onerror="this.style.display='none'">
-                            <img src="./${folder.name}/preview3.png" onerror="this.style.display='none'">
                         </div>
                         <div class="game-info">
                             <div class="game-title">${folder.name.replace(/-/g, ' ')}</div>
                             <div class="btn-group">
-                                <a href="./${folder.name}/index.html" class="btn">[ PLAY WEB VERSION ]</a>
-                                <a href="./${folder.name}/Installer.exe" class="btn btn-download">[ DOWNLOAD INSTALLER ]</a>
+                                ${buttonHTML}
                             </div>
                         </div>
                     `;
                     container.appendChild(card);
                     startSlideshow(`slideshow-${folder.name}`);
-                });
+                }
 
             } catch (error) {
-                status.innerHTML = "SYSTEM ERROR: FAILED TO READ REPOSITORY.";
+                status.innerHTML = "SYSTEM ERROR: FAILED TO ACCESS REPOSITORY.";
+                console.error(error);
             }
         }
 
         function startSlideshow(containerId) {
-            const images = document.querySelectorAll(`#${containerId} img`);
+            const images = Array.from(document.querySelectorAll(`#${containerId} img`)).filter(img => img.style.display !== 'none');
             if (images.length <= 1) return;
             
             let currentIndex = 0;
             setInterval(() => {
                 images[currentIndex].classList.remove('active');
                 currentIndex = (currentIndex + 1) % images.length;
-                // Skip images that failed to load (hidden by onerror)
-                if (images[currentIndex].style.display === 'none') {
-                    currentIndex = 0;
-                }
                 images[currentIndex].classList.add('active');
-            }, 3000);
+            }, 3500); // Rotates every 3.5 seconds
         }
 
         scanGames();
