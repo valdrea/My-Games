@@ -45,7 +45,6 @@
             text-align: center;
         }
 
-        /* Community Forum Link */
         #forum-link {
             margin-bottom: 30px;
             padding: 12px 24px;
@@ -54,7 +53,6 @@
             text-decoration: none;
             font-size: 1.4rem;
             transition: all 0.3s ease;
-            text-align: center;
         }
         #forum-link:hover {
             background: var(--neon-pink);
@@ -64,47 +62,94 @@
 
         #game-container {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 30px;
-            width: 90%;
-            max-width: 1200px;
-            margin-top: 10px;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 40px;
+            width: 95%;
+            max-width: 1400px;
         }
 
         .game-card {
-            background: rgba(0, 0, 0, 0.8);
+            background: rgba(0, 0, 0, 0.9);
             border: 2px solid var(--neon-blue);
-            padding: 15px;
+            padding: 0;
             text-align: center;
             transition: all 0.3s ease;
-            cursor: pointer;
-            box-shadow: 0 0 10px rgba(0, 255, 255, 0.2);
-            text-decoration: none;
-            color: inherit;
+            position: relative;
+            overflow: hidden;
         }
 
         .game-card:hover {
-            transform: scale(1.05) translateY(-5px);
             border-color: var(--neon-pink);
             box-shadow: 0 0 20px var(--neon-pink);
         }
 
-        .preview-img {
+        /* Slideshow Container */
+        .slideshow {
             width: 100%;
-            height: 180px;
-            object-fit: cover;
+            height: 200px;
+            position: relative;
+            background: #000;
             border-bottom: 2px solid var(--neon-blue);
-            margin-bottom: 15px;
+        }
+
+        .slideshow img {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            object-fit: cover;
+            opacity: 0;
+            transition: opacity 1s ease-in-out;
             image-rendering: pixelated;
         }
 
-        .game-title {
-            font-size: 2rem;
-            text-transform: uppercase;
-            margin: 10px 0;
+        .slideshow img.active {
+            opacity: 1;
         }
 
-        #status { font-size: 1.2rem; color: #555; margin-top: 20px; }
+        .game-info {
+            padding: 15px;
+        }
+
+        .game-title {
+            font-size: 2.2rem;
+            text-transform: uppercase;
+            color: var(--neon-blue);
+            margin: 5px 0;
+        }
+
+        /* Button Styles */
+        .btn-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .btn {
+            padding: 8px;
+            text-decoration: none;
+            font-size: 1.2rem;
+            border: 1px solid var(--neon-blue);
+            color: var(--neon-blue);
+            transition: 0.2s;
+        }
+
+        .btn:hover {
+            background: var(--neon-blue);
+            color: #000;
+        }
+
+        .btn-download {
+            border-color: var(--neon-pink);
+            color: var(--neon-pink);
+        }
+
+        .btn-download:hover {
+            background: var(--neon-pink);
+            color: #000;
+        }
+
+        #status { font-size: 1.5rem; color: var(--neon-pink); margin-top: 40px; }
     </style>
 </head>
 <body>
@@ -116,7 +161,6 @@
     </a>
 
     <div id="status">SCANNING DIRECTORIES...</div>
-
     <div id="game-container"></div>
 
     <script>
@@ -130,33 +174,52 @@
             try {
                 const response = await fetch(`https://api.github.com/repos/${USERNAME}/${REPO}/contents/`);
                 const data = await response.json();
-
                 status.style.display = 'none';
                 const folders = data.filter(item => item.type === 'dir');
 
-                if (folders.length === 0) {
-                    status.innerHTML = "NO BOOTABLE PROTOCOLS FOUND.";
-                    status.style.display = 'block';
-                    return;
-                }
-
                 folders.forEach(folder => {
-                    const card = document.createElement('a');
+                    const card = document.createElement('div');
                     card.className = 'game-card';
-                    card.href = `./${folder.name}/index.html`;
 
+                    // We assume folders contain preview1.png, preview2.png, preview3.png
+                    // and an installer file named "Installer.exe"
                     card.innerHTML = `
-                        <img class="preview-img" src="./${folder.name}/preview.png" alt="${folder.name}" onerror="this.src='https://placehold.co/400x250/000/0ff?text=NO+PREVIEW'">
-                        <div class="game-title">${folder.name.replace(/-/g, ' ')}</div>
-                        <div style="font-size: 1rem; color: var(--neon-blue);">[ INITIALIZE PROTOCOL ]</div>
+                        <div class="slideshow" id="slideshow-${folder.name}">
+                            <img class="active" src="./${folder.name}/preview1.png" onerror="this.src='https://placehold.co/400x250/000/0ff?text=PREVIEW+1'">
+                            <img src="./${folder.name}/preview2.png" onerror="this.style.display='none'">
+                            <img src="./${folder.name}/preview3.png" onerror="this.style.display='none'">
+                        </div>
+                        <div class="game-info">
+                            <div class="game-title">${folder.name.replace(/-/g, ' ')}</div>
+                            <div class="btn-group">
+                                <a href="./${folder.name}/index.html" class="btn">[ PLAY WEB VERSION ]</a>
+                                <a href="./${folder.name}/Installer.exe" class="btn btn-download">[ DOWNLOAD INSTALLER ]</a>
+                            </div>
+                        </div>
                     `;
                     container.appendChild(card);
+                    startSlideshow(`slideshow-${folder.name}`);
                 });
 
             } catch (error) {
                 status.innerHTML = "SYSTEM ERROR: FAILED TO READ REPOSITORY.";
-                status.style.display = 'block';
             }
+        }
+
+        function startSlideshow(containerId) {
+            const images = document.querySelectorAll(`#${containerId} img`);
+            if (images.length <= 1) return;
+            
+            let currentIndex = 0;
+            setInterval(() => {
+                images[currentIndex].classList.remove('active');
+                currentIndex = (currentIndex + 1) % images.length;
+                // Skip images that failed to load (hidden by onerror)
+                if (images[currentIndex].style.display === 'none') {
+                    currentIndex = 0;
+                }
+                images[currentIndex].classList.add('active');
+            }, 3000);
         }
 
         scanGames();
