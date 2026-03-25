@@ -20,6 +20,7 @@
         #top-center { top:15px; left:50%; transform:translateX(-50%); text-align:center; }
         #bottom-left { bottom:20px; left:20px; }
         #godmode-indicator { position:absolute; bottom:20px; right:20px; font-size:22px; font-weight:bold; background:rgba(0,0,0,0.7); padding:5px 12px; border:2px solid #ffaa00; color:#ffaa00; letter-spacing:2px; border-radius:8px; backdrop-filter:blur(4px); pointer-events:none; z-index:25; box-shadow:0 0 12px rgba(255,170,0,0.5); }
+        #muted-indicator { position:absolute; bottom:60px; right:20px; font-size:22px; font-weight:bold; background:rgba(0,0,0,0.7); padding:5px 12px; border:2px solid #ffaa00; color:#ffaa00; letter-spacing:2px; border-radius:8px; backdrop-filter:blur(4px); pointer-events:none; z-index:25; box-shadow:0 0 12px rgba(255,170,0,0.5); display:none; }
         #start-screen, #game-over-screen, #win-screen { position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,10,30,0.95); display:flex; align-items:center; justify-content:center; flex-direction:column; z-index:20; color:#0ff; text-align:center; }
         h1 { font-size:64px; margin:0; text-shadow:0 0 20px #0ff; animation:glitch 1s infinite alternate; }
         @keyframes glitch { 0%{text-shadow:2px 0 #0ff,-2px 0 #f0f} 100%{text-shadow:-2px 0 #0ff,2px 0 #f0f} }
@@ -43,6 +44,7 @@
         <div class="info" id="top-center">FLOOR <span id="floor-level">01</span> • KILLS <span id="kills">00</span>/<span id="goal">05</span><br><span style="font-size:28px;">SCORE <span id="score">000000</span></span></div>
         <div class="info" id="bottom-left">LEVEL <span id="player-level">01</span></div>
         <div id="godmode-indicator" style="display:none;">⚡ GOD MODE ⚡</div>
+        <div id="muted-indicator" style="display:none;">🔇 MUTED (M to toggle)</div>
     </div>
 
     <div id="start-screen">
@@ -52,7 +54,7 @@
             <button id="start-button" disabled>LOADING ASSETS... 0%</button>
             <button id="story-button" onclick="showStory()" disabled>THE STORY & GAME INTEL</button>
             <p style="margin-top:40px;font-size:18px;">W/S — MOVE FORWARD/BACK<br>A/D — STRAFE LEFT/RIGHT<br>MOUSE — LOOK AROUND (HORIZONTAL ONLY)<br>CLICK TO LOCK POINTER</p>
-            <p style="margin-top:15px;font-size:18px;color:#ff0;">Press <strong>F11</strong> for fullscreen • <strong>G</strong> for GOD MODE (testing)</p>
+            <p style="margin-top:15px;font-size:18px;color:#ff0;">Press <strong>F11</strong> for fullscreen • <strong>G</strong> = God Mode • <strong>M</strong> = Mute All Sounds</p>
         </div>
         <div class="scanline"></div>
     </div>
@@ -71,13 +73,32 @@
         <p>Contact: willruss@gmail.com</p>
     </div>
 
-    <div id="game-over-screen" style="display:none;"><div><h1 style="color:#f00;">SYSTEM FAILURE</h1><p id="final-score" style="font-size:32px;margin:20px 0;"></p><button onclick="restartGame()">REBOOT SHIP</button></div><div class="scanline"></div></div>
-    <div id="win-screen" style="display:none;"><div><h1 style="color:#0f0;">MISSION COMPLETE</h1><p style="font-size:28px;margin:20px 0;">YOU REGAINED CONTROL<br>OF THE SHIP AND FLEW HOME</p><p id="win-score" style="font-size:32px;margin:20px 0;"></p><button onclick="restartGame()">NEW MISSION</button></div><div class="scanline"></div></div>
+    <div id="game-over-screen" style="display:none;">
+        <div>
+            <h1 style="color:#f00;">SYSTEM FAILURE</h1>
+            <p id="final-score" style="font-size:32px;margin:20px 0;"></p>
+            <p style="font-size:22px;margin-top:20px;">Press ESC to regain mouse control</p>
+            <button onclick="restartGame()">REBOOT SHIP</button>
+        </div>
+        <div class="scanline"></div>
+    </div>
+
+    <div id="win-screen" style="display:none;">
+        <div>
+            <h1 style="color:#0f0;">MISSION COMPLETE</h1>
+            <p style="font-size:28px;margin:20px 0;">YOU REGAINED CONTROL<br>OF THE SHIP AND FLEW HOME</p>
+            <p id="win-score" style="font-size:32px;margin:20px 0;"></p>
+            <p style="font-size:22px;margin-top:20px;">Press ESC to regain mouse control</p>
+            <button onclick="restartGame()">NEW MISSION</button>
+        </div>
+        <div class="scanline"></div>
+    </div>
+
     <div id="floor-cleared">ENOUGH ROGUE ENTITIES HAVE BEEN DISABLED<br>TELEPORTING TO NEXT FLOOR<br><span style="font-size:28px;color:#ff0;">GOOD LUCK</span></div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
     <script>
-        // ====================== AUDIO (all volumes halved) ======================
+        // ====================== AUDIO (50% volume) ======================
         let audioCtx;
         let backgroundMusic = new Audio('assets/background.ogg');
         let bossMusic = new Audio('assets/boss.ogg');
@@ -88,18 +109,44 @@
         let gameOverSound = new Audio('assets/gameover.ogg');
         let storySound = new Audio('assets/story.ogg');
 
-        backgroundMusic.loop = true; backgroundMusic.volume = 0.14;
-        bossMusic.loop = true; bossMusic.volume = 0.175;
-        laserSound.volume = 0.45;
-        lootSound.volume = 0.425;
-        damageSound.volume = 0.375;
-        deathSound.volume = 0.375;
-        gameOverSound.volume = 0.4;
-        storySound.volume = 0.425;
+        let muted = false;
+        const originalVolumes = {
+            background: 0.14,
+            boss: 0.175,
+            laser: 0.45,
+            loot: 0.425,
+            damage: 0.375,
+            death: 0.375,
+            gameover: 0.4,
+            story: 0.425
+        };
+
+        backgroundMusic.loop = true; backgroundMusic.volume = originalVolumes.background;
+        bossMusic.loop = true; bossMusic.volume = originalVolumes.boss;
+        laserSound.volume = originalVolumes.laser;
+        lootSound.volume = originalVolumes.loot;
+        damageSound.volume = originalVolumes.damage;
+        deathSound.volume = originalVolumes.death;
+        gameOverSound.volume = originalVolumes.gameover;
+        storySound.volume = originalVolumes.story;
 
         function initAudio() { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
         function resumeAudio() { if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume(); }
-        function playDeathSound() { deathSound.currentTime = 0; deathSound.play().catch(() => {}); }
+        function playDeathSound() { if(!muted){ deathSound.currentTime = 0; deathSound.play().catch(() => {}); } }
+
+        function toggleMute() {
+            muted = !muted;
+            const v = muted ? 0 : 1;
+            backgroundMusic.volume = originalVolumes.background * v;
+            bossMusic.volume = originalVolumes.boss * v;
+            laserSound.volume = originalVolumes.laser * v;
+            lootSound.volume = originalVolumes.loot * v;
+            damageSound.volume = originalVolumes.damage * v;
+            deathSound.volume = originalVolumes.death * v;
+            gameOverSound.volume = originalVolumes.gameover * v;
+            storySound.volume = originalVolumes.story * v;
+            document.getElementById('muted-indicator').style.display = muted ? 'block' : 'none';
+        }
 
         // ====================== STORY ======================
         function showStory() {
@@ -252,12 +299,12 @@
         function shoot(){
             if(playerCharge<SHOT_COST) return;
             playerCharge-=SHOT_COST; updateHUD();
-            laserSound.currentTime=0; laserSound.play(); addGunShake();
+            if(!muted){ laserSound.currentTime=0; laserSound.play(); }
+            addGunShake();
 
             const dir = new THREE.Vector3(); camera.getWorldDirection(dir);
             const start = camera.position.clone(); start.y -= 0.15;
 
-            // Raycast to stop at first wall
             const ray = new THREE.Raycaster(start, dir);
             const hits = ray.intersectObjects(wallMeshes);
             let end = start.clone().addScaledVector(dir, 40);
@@ -280,7 +327,6 @@
                 const pulse = 0.85 + Math.sin(time*18)*0.25;
                 p.mesh.scale.setScalar(pulse);
 
-                // Stop at wall or end of life
                 if(p.life <= 0 || p.mesh.position.distanceTo(p.target) < 1){
                     scene.remove(p.mesh); projectiles.splice(i,1); continue;
                 }
@@ -316,14 +362,13 @@
             }
         }
 
-        function resolveEnemyCollisions(){ /* unchanged */ for(let i=0;i<enemies.length;i++)for(let j=i+1;j<enemies.length;j++){
+        function resolveEnemyCollisions(){ for(let i=0;i<enemies.length;i++)for(let j=i+1;j<enemies.length;j++){
             const a=enemies[i].sprite.position, b=enemies[j].sprite.position;
             const dx=a.x-b.x, dz=a.z-b.z, dist=Math.hypot(dx,dz);
             if(dist<1.3&&dist>0.01){ const push=(1.3-dist)*1.2, px=(dx/dist)*push, pz=(dz/dist)*push;
                 if(isValidPosition(a.x+px*0.5,a.z)) a.x+=px*0.5; if(isValidPosition(a.x,a.z+pz*0.5)) a.z+=pz*0.5;
                 if(isValidPosition(b.x-px*0.5,b.z)) b.x-=px*0.5; if(isValidPosition(b.x,b.z-pz*0.5)) b.z-=pz*0.5; } } }
 
-        // ====================== FLOOR & GAME STATE ======================
         function showClearedPopup(){ if(transitioning) return; transitioning=true; isPaused=true;
             const popup=document.getElementById('floor-cleared'); popup.style.display='block';
             setTimeout(()=>{ popup.style.display='none'; isPaused=false; transitioning=false; nextFloor(); },2800); }
@@ -368,17 +413,17 @@
                 if(e.isMoving){ const bh=e.isBoss?BOSS_BOUNCE_HEIGHT:WALK_BOUNCE_HEIGHT; ep.y=e.baseY+Math.abs(Math.sin(e.walkPhase))*bh; }
                 else ep.y+=(e.baseY-ep.y)*Math.min(1,delta*8);
                 e.hpBar.lookAt(camera.position); e.namePlate.lookAt(camera.position);
-                if(dist<1.8&&time-e.lastAttack>1.05){ if(!godMode){ playerHealth=Math.max(0,playerHealth-(12+playerLevel*2)); damageSound.currentTime=0; damageSound.play(); }
+                if(dist<1.8&&time-e.lastAttack>1.05){ if(!godMode){ playerHealth=Math.max(0,playerHealth-(12+playerLevel*2)); if(!muted){ damageSound.currentTime=0; damageSound.play(); } }
                     e.lastAttack=time; updateHUD(); if(!godMode&&playerHealth<=0) endGame(); } }
             resolveEnemyCollisions(); }
 
         function updatePickups(delta,time){ if(isPaused) return;
             for(let i=crystals.length-1;i>=0;i--){ const c=crystals[i]; c.sprite.position.y=c.originalY+Math.sin(time*c.bobSpeed)*0.1;
                 const d=Math.hypot(camera.position.x-c.sprite.position.x,camera.position.z-c.sprite.position.z);
-                if(d<1.2){ playerCharge=Math.min(MAX_CHARGE,playerCharge+50); playerScore+=35; lootSound.currentTime=0; lootSound.play(); scene.remove(c.sprite); crystals.splice(i,1); updateHUD(); } }
+                if(d<1.2){ playerCharge=Math.min(MAX_CHARGE,playerCharge+50); playerScore+=35; if(!muted){ lootSound.currentTime=0; lootSound.play(); } scene.remove(c.sprite); crystals.splice(i,1); updateHUD(); } }
             for(let i=healthPickups.length-1;i>=0;i--){ const h=healthPickups[i]; h.sprite.position.y=h.originalY+Math.sin(time*h.bobSpeed)*0.1;
                 const d=Math.hypot(camera.position.x-h.sprite.position.x,camera.position.z-h.sprite.position.z);
-                if(d<1.2){ playerHealth=Math.min(100,playerHealth+50); playerScore+=60; lootSound.currentTime=0; lootSound.play(); scene.remove(h.sprite); healthPickups.splice(i,1); updateHUD(); } } }
+                if(d<1.2){ playerHealth=Math.min(100,playerHealth+50); playerScore+=60; if(!muted){ lootSound.currentTime=0; lootSound.play(); } scene.remove(h.sprite); healthPickups.splice(i,1); updateHUD(); } } }
 
         function updateHUD(){ document.getElementById('health-inner').style.width=playerHealth+'%';
             document.getElementById('ammo-inner').style.width=playerCharge+'%';
@@ -397,7 +442,11 @@
             renderer.render(scene,camera); }
 
         function setupControls(){
-            window.addEventListener('keydown',e=>{ keys[e.key.toLowerCase()]=true; if(e.key.toLowerCase()==='g'&&gameRunning) toggleGodMode(); });
+            window.addEventListener('keydown',e=>{
+                keys[e.key.toLowerCase()]=true;
+                if(e.key.toLowerCase()==='g'&&gameRunning) toggleGodMode();
+                if(e.key.toLowerCase()==='m') toggleMute();
+            });
             window.addEventListener('keyup',e=>{ keys[e.key.toLowerCase()]=false; });
             document.addEventListener('mousemove',e=>{ if(!isLocked||!gameRunning||isPaused) return; yaw-=e.movementX*MOUSE_SENSITIVITY; camera.rotation.set(pitch,yaw,0); });
             renderer.domElement.addEventListener('mousedown',e=>{ if(e.button===0&&isLocked&&gameRunning&&!isPaused) shoot(); });
@@ -415,7 +464,8 @@
             MAZE_SIZE=11; maze=generateMaze(MAZE_SIZE,MAZE_SIZE); createWalls(); createFloorAndCeiling(); addCorridorLights();
             killGoal=6; nextEnemyTextureIndex=0; spawnEnemies(9); currentDamage=28;
             playerHealth=100; playerCharge=100; playerScore=0; playerLevel=1; kills=0;
-            isPaused=false; transitioning=false; godMode=false;
+            isPaused=false; transitioning=false; godMode=false; muted=false;
+            document.getElementById('muted-indicator').style.display='none';
             camera.position.set(CELL_SIZE*1+CELL_SIZE/2,1.65,CELL_SIZE*1+CELL_SIZE/2); yaw=3*Math.PI/4; camera.rotation.set(pitch,yaw,0);
             updateHUD(); gameRunning=true; setTimeout(()=>{ renderer.domElement.requestPointerLock(); },150); }
 
