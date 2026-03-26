@@ -1,6 +1,11 @@
 const USERNAME = 'valdrea';
         const REPO = 'My-Games';
 
+        // Quick helper function to convert bytes to MB
+        const formatSize = (bytes) => {
+            return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+        };
+
         async function scanGames() {
             const container = document.getElementById('game-container');
             const status = document.getElementById('status');
@@ -16,11 +21,9 @@ const USERNAME = 'valdrea';
                     const contentResponse = await fetch(folder.url);
                     const contents = await contentResponse.json();
                     
-                    // Identify file types
                     const hasWeb = contents.some(file => file.name.toLowerCase() === 'index.html');
                     const exeFiles = contents.filter(file => file.name.toLowerCase().endsWith('.exe'));
                     
-                    // Separate the AudioPack from the main Game EXE
                     const audioFile = exeFiles.find(f => f.name.toLowerCase() === 'audiopack.exe');
                     const gameExe = exeFiles.find(f => f.name.toLowerCase() !== 'audiopack.exe');
 
@@ -31,14 +34,16 @@ const USERNAME = 'valdrea';
                     if (hasWeb) {
                         buttonHTML = `<a href="./${folder.name}/index.html" class="btn">[ PLAY WEB VERSION ]</a>`;
                     } else {
-                        // If we found any EXE that isn't the audio pack, show it
+                        // Add size to Game/Installer button
                         if (gameExe) {
                             const btnLabel = gameExe.name.toLowerCase().includes('install') ? 'INSTALLER' : 'GAME .EXE';
-                            buttonHTML += `<a href="./${folder.name}/${gameExe.name}" class="btn btn-download">[ DOWNLOAD ${btnLabel} ]</a>`;
+                            const sizeText = formatSize(gameExe.size);
+                            buttonHTML += `<a href="./${folder.name}/${gameExe.name}" class="btn btn-download">[ DOWNLOAD ${btnLabel} - ${sizeText} ]</a>`;
                         }
-                        // Show Audio Pack if present
+                        // Add size to Audio Pack button
                         if (audioFile) {
-                            buttonHTML += `<a href="./${folder.name}/${audioFile.name}" class="btn btn-download" style="margin-top:5px; border-style:dashed;">[ DOWNLOAD AUDIO PACK ]</a>`;
+                            const sizeText = formatSize(audioFile.size);
+                            buttonHTML += `<a href="./${folder.name}/${audioFile.name}" class="btn btn-download" style="margin-top:5px; border-style:dashed;">[ DOWNLOAD AUDIO PACK - ${sizeText} ]</a>`;
                         }
                     }
 
