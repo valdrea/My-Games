@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover, orientation=landscape">
-    <title>Fantasy Mahjong</title>
+    <title>Mahjong Solitaire - Enhanced</title>
     <style>
         * {
             user-select: none;
@@ -266,7 +266,7 @@
                     <option value="3">Fortress</option>
                 </select>
                 
-                <button id="colorModeBtn">🎨 Color OFF</button>
+                <button id="colorModeBtn">🎨 Color ON</button>
                 <button id="musicToggleBtn">🎵 Music On</button>
                 <button id="soundToggleBtn">🔊 SFX On</button>
                 <button id="moodBtn">🌈 Mood</button>
@@ -285,15 +285,14 @@
 
 <script>
     (function() {
-        // ==================== ENHANCED Fantasy Mahjong v3.1 ====================
-        // • Everything enlarged ~15% (tiles, fonts, spacing, canvas)
-        // • Text is now crisp and larger (no more blur)
-        // • Full dark cobalt blue UI theme with gradient accents
-        // • All previous features (3D beveled tiles, 4 layouts, auto-solvable shuffle, etc.)
+        // ==================== ENHANCED MAHJONG SOLITAIRE v3.2 ====================
+        // • Music now loads from the real URL: https://valdrea.github.io/My-Games/fantasy-mahjong/assets/music.ogg
+        // • Color Mode is now ON by default (as requested)
+        // • All previous enhancements kept (larger tiles, cobalt UI, 3D bevel, 4 layouts, etc.)
 
         const SCALE = 1.15;
-        const TILE_W = Math.round(84 * SCALE);   // 97
-        const TILE_H = Math.round(100 * SCALE);  // 115
+        const TILE_W = Math.round(84 * SCALE);
+        const TILE_H = Math.round(100 * SCALE);
         const LAYER_OFFSET = Math.round(8 * SCALE);
 
         function generateLayout(layoutId) {
@@ -393,7 +392,7 @@
         let unlockedLayouts = [0];
         let musicEnabled = true;
         let sfxEnabled = true;
-        let colorMode = false;
+        let colorMode = true;          // ← NOW ON BY DEFAULT
         let gameOver = false;
         let winFlag = false;
         let gameStarted = false;
@@ -421,20 +420,38 @@
 
         let bgMusic = null;
 
+        // === REAL MUSIC LOADING (fixed) ===
         function initMusic() {
-            if (bgMusic) { bgMusic.pause(); bgMusic = null; }
+            if (bgMusic) {
+                bgMusic.pause();
+                bgMusic = null;
+            }
             if (!musicEnabled) return;
-            try {
-                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                bgMusic = { ctx: audioCtx, playing: true };
-            } catch(e) {}
+
+            bgMusic = new Audio('https://valdrea.github.io/My-Games/fantasy-mahjong/assets/music.ogg');
+            bgMusic.loop = true;
+            bgMusic.volume = 0.35;
+            
+            bgMusic.play().catch(() => {
+                // Autoplay blocked → wait for first user tap
+                const unlock = () => {
+                    if (bgMusic && musicEnabled) bgMusic.play().catch(() => {});
+                    document.removeEventListener('click', unlock);
+                    document.removeEventListener('touchstart', unlock);
+                };
+                document.addEventListener('click', unlock);
+                document.addEventListener('touchstart', unlock);
+            });
         }
 
         function toggleMusic() {
             musicEnabled = !musicEnabled;
             musicToggleBtn.innerText = musicEnabled ? "🎵 Music On" : "🔇 Music Off";
-            if (musicEnabled) initMusic();
-            else if (bgMusic) { bgMusic.playing = false; bgMusic = null; }
+            if (musicEnabled) {
+                initMusic();
+            } else if (bgMusic) {
+                bgMusic.pause();
+            }
         }
 
         function playSFX(type) {
@@ -900,6 +917,7 @@
             playSFX('shuffle');
         }
 
+        // Wire up buttons
         musicToggleBtn.onclick = toggleMusic;
         soundToggleBtn.onclick = () => { sfxEnabled = !sfxEnabled; soundToggleBtn.innerText = sfxEnabled ? "🔊 SFX On" : "🔇 SFX Off"; };
         colorModeBtn.onclick = toggleColorMode;
@@ -928,9 +946,9 @@
             setCanvasSize();
             populateLayoutSelect();
             resetGame();
-            initMusic();
+            initMusic();           // ← real music now loads
             render();
-            console.log('%c✅ Fantasy Mahjong v3.1 ready • 15% larger • crisp text • cobalt blue UI', 'color:#7cb8ff; font-weight:bold');
+            console.log('%c✅ Mahjong Solitaire v3.2 ready • Music fixed • Color ON by default', 'color:#7cb8ff; font-weight:bold');
         }
 
         window.addEventListener('resize', () => {
