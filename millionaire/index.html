@@ -2,254 +2,403 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Millionaire Trivia</title>
-
-  <!-- Soft, rounded font -->
-  <link
-    href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600&display=swap"
-    rel="stylesheet"
-  />
+  <title>Who Wants to Be a Millionaire</title>
 
   <!-- Trivia API decoder -->
   <script src="https://cdn.jsdelivr.net/npm/he/he.js"></script>
 
   <style>
-    /* Global body tweaks */
-    body {
-      margin: 0;
-      font-family: 'Quicksand', Arial, sans-serif;
-      font-size: 1.1rem;
-      background: radial-gradient(circle at center, #000 0%, #111 100%);
-      color: #eee;
-      overflow: hidden;
+    :root {
+      --neon-cyan: #00f7ff;
+      --gold: #ffcc00;
+      --navy: #001f3f;
     }
 
-    /* Grid background */
+    /* TV studio atmosphere */
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Quicksand', Arial, sans-serif;
+      font-size: 1.1rem;
+      background: radial-gradient(circle at center, #001122 0%, #000000 70%);
+      color: #eee;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Subtle stage floor + grid */
     .grid-bg {
-      background-image:
-        repeating-linear-gradient(0deg, #222 0, #222 1px, transparent 1px, transparent 20px),
-        repeating-linear-gradient(90deg, #222 0, #222 1px, transparent 1px, transparent 20px);
       position: absolute;
       top: 0;
       left: 0;
       width: 100%;
       height: 100%;
-      z-index: -1;
+      background: 
+        linear-gradient(rgba(255,204,0,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,204,0,0.03) 1px, transparent 1px);
+      background-size: 60px 60px;
+      z-index: -2;
+      pointer-events: none;
     }
 
-    /* Perspective for 3D effect */
+    /* Spotlight effect */
+    body::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(circle, rgba(255,255,255,0.12) 0%, transparent 70%);
+      z-index: -1;
+      animation: spotlight 25s infinite linear;
+      pointer-events: none;
+    }
+
+    @keyframes spotlight {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
     .container {
-      max-width: 1000px;
+      max-width: 1180px;
       margin: 0 auto;
       padding: 20px;
       position: relative;
-      perspective: 800px;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
     }
 
-    /* Neon‐glow title */
+    /* Dramatic title */
     h1 {
       text-align: center;
-      color: #0ff;
-      font-size: 2.8em;
-      margin-bottom: 20px;
-      text-shadow:
-        0 0 8px #0ff,
-        0 0 16px #0ff,
-        2px 2px #005555;
+      font-size: 3.2em;
+      font-weight: 600;
+      letter-spacing: 4px;
+      color: var(--gold);
+      margin: 10px 0 25px;
+      text-shadow: 
+        0 0 10px var(--gold),
+        0 0 20px var(--gold),
+        0 0 30px #ff8800,
+        4px 4px 0 #000;
+      animation: titleGlow 4s ease-in-out infinite alternate;
     }
 
-    /* Game layout */
+    @keyframes titleGlow {
+      from { text-shadow: 0 0 10px var(--gold), 0 0 20px var(--gold); }
+      to { text-shadow: 0 0 20px var(--gold), 0 0 40px #ff8800, 0 0 50px #ff8800; }
+    }
+
     .game-area {
       display: flex;
-      gap: 20px;
-      align-items: stretch;
+      gap: 25px;
+      flex: 1;
+      min-height: 0;
     }
 
-    /* Shared panel style */
-    .question-box,
-    .prize-ladder {
-      border-radius: 15px;
-      background: #222;
-      border: 2px solid #0ff;
-      box-shadow:
-        0 8px 20px rgba(0, 255, 255, 0.2),
-        inset 0 0 10px rgba(0, 255, 255, 0.1);
-      transform: translateY(-2px);
-      transition: transform 0.3s;
-    }
-    .question-box:hover,
-    .prize-ladder:hover {
-      transform: translateY(-4px);
-    }
-
-    /* Question box */
+    /* Question panel - TV screen style */
     .question-box {
-      flex: 2;
+      flex: 2.5;
+      background: linear-gradient(#002244, #001122);
+      border: 4px solid var(--gold);
+      border-radius: 20px;
+      box-shadow: 
+        0 0 40px rgba(255, 204, 0, 0.4),
+        inset 0 0 30px rgba(0, 247, 255, 0.2);
       padding: 30px;
       display: flex;
       flex-direction: column;
+      position: relative;
     }
 
-    /* Timer */
+    .question-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+      font-size: 1.1em;
+      color: var(--neon-cyan);
+    }
+
     #timer {
-      font-size: 2.2em;
-      color: #0ff;
-      text-align: center;
-      margin-bottom: 20px;
-      text-shadow: 0 0 6px #0ff;
+      font-size: 2.4em;
+      font-weight: 600;
+      color: var(--neon-cyan);
+      text-shadow: 0 0 12px var(--neon-cyan);
+      transition: color 0.4s;
+    }
+    #timer.urgent {
+      color: #ff3300;
+      animation: timerPulse 0.8s infinite;
     }
 
-    /* Question text */
+    @keyframes timerPulse {
+      50% { opacity: 0.4; }
+    }
+
+    #question-number {
+      background: rgba(255,204,0,0.15);
+      padding: 4px 16px;
+      border-radius: 30px;
+      font-weight: 600;
+    }
+
     #question {
-      font-size: 1.8em;
+      font-size: 1.85em;
+      line-height: 1.3;
       text-align: center;
+      margin-bottom: 30px;
+      flex-grow: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Authentic A-B-C-D answers */
+    .answers {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
       margin-bottom: 25px;
     }
 
-    /* Answers grid */
-    .answers {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 20px;
-      margin-bottom: 30px;
-      flex-grow: 1;
-    }
-
-    /* Answer buttons */
-    .answers button {
-      border-radius: 12px;
-      border: 2px solid #0ff;
-      background: #333;
-      color: #eee;
-      padding: 20px;
-      font-size: 1.2em;
+    .answer-row {
+      display: flex;
+      align-items: center;
+      gap: 18px;
       cursor: pointer;
-      box-shadow: 0 4px 12px rgba(255, 0, 255, 0.3);
-      transition: transform 0.2s, box-shadow 0.2s, background 0.2s;
-    }
-    .answers button:hover {
-      transform: translateY(-3px);
-      box-shadow: 0 8px 24px rgba(255, 0, 255, 0.4);
-      background: #444;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      padding: 8px;
+      border-radius: 14px;
     }
 
-    /* Correct / incorrect */
-    .answers button.correct {
-      border-color: #ffd700;
-      box-shadow: 0 0 16px #ffd700;
-      background: orange;
-      color: black;
+    .answer-row:hover {
+      transform: translateX(8px);
+      background: rgba(255,204,0,0.1);
     }
-    .answers button.incorrect {
-      border-color: #f00;
-      box-shadow: 0 0 16px #f00;
-      background: red;
+
+    .letter {
+      width: 58px;
+      height: 58px;
+      background: #00ccff;
+      color: #001f3f;
+      font-size: 1.8em;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0, 204, 255, 0.5);
+      flex-shrink: 0;
+      transition: all 0.3s;
+    }
+
+    .answer-text {
+      flex: 1;
+      background: #112233;
+      color: #eee;
+      padding: 18px 24px;
+      font-size: 1.25em;
+      border-radius: 12px;
+      border: 3px solid #00ccff;
+      box-shadow: 0 4px 12px rgba(0, 204, 255, 0.3);
+    }
+
+    /* Correct / Wrong states */
+    .answer-row.correct .letter,
+    .answer-row.correct .answer-text {
+      background: #ffcc00;
+      color: #001f3f;
+      border-color: #ffcc00;
+      box-shadow: 0 0 25px #ffcc00;
+    }
+
+    .answer-row.incorrect .letter,
+    .answer-row.incorrect .answer-text {
+      background: #ff3333;
       color: white;
+      border-color: #ff3333;
+      animation: shake 0.4s ease-in-out;
     }
 
-    /* Feedback text */
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-6px); }
+      75% { transform: translateX(6px); }
+    }
+
     #feedback {
       text-align: center;
-      font-size: 2em;
+      font-size: 2.4em;
+      font-weight: 600;
       margin-top: 10px;
-      display: none;
+      min-height: 60px;
+      text-shadow: 0 0 15px currentColor;
     }
 
-    /* Lifelines row */
+    /* Lifelines - TV console style */
     .lifelines {
       display: flex;
-      justify-content: space-around;
+      justify-content: center;
+      gap: 18px;
       margin-top: auto;
+      padding-top: 20px;
+      border-top: 2px solid rgba(255,204,0,0.3);
     }
+
     .lifelines button {
-      border-radius: 12px;
-      border: 2px solid #0ff;
-      background: #333;
-      color: #eee;
-      padding: 15px 25px;
-      font-size: 1em;
-      font-weight: bold;
-      box-shadow: 0 4px 12px rgba(255, 0, 255, 0.3);
+      flex: 1;
+      max-width: 220px;
+      padding: 16px 24px;
+      font-size: 1.1em;
+      font-weight: 700;
+      background: linear-gradient(#112233, #001f3f);
+      color: white;
+      border: 3px solid var(--neon-cyan);
+      border-radius: 50px;
+      box-shadow: 
+        0 6px 20px rgba(0, 247, 255, 0.4),
+        inset 0 3px 8px rgba(255,255,255,0.2);
       cursor: pointer;
-      transition: transform 0.2s, box-shadow 0.2s, background 0.2s;
+      transition: all 0.25s;
     }
+
     .lifelines button:hover:not(:disabled) {
-      transform: translateY(-3px);
-      box-shadow: 0 8px 24px rgba(255, 0, 255, 0.4);
-      background: #444;
+      transform: scale(1.08) translateY(-3px);
+      box-shadow: 0 12px 30px rgba(0, 247, 255, 0.6);
     }
+
     .lifelines button:disabled {
-      background: #555;
-      color: #999;
-      border-color: #555;
-      filter: grayscale(100%);
-      opacity: 0.6;
-      box-shadow: none;
+      opacity: 0.35;
+      filter: grayscale(1);
       cursor: not-allowed;
     }
 
-    /* Prize ladder */
+    /* Prize ladder - iconic vertical money ladder */
     .prize-ladder {
       flex: 1;
-      padding: 20px;
-      text-align: center;
+      background: linear-gradient(#112233, #001122);
+      border: 4px solid var(--gold);
+      border-radius: 20px;
+      padding: 20px 15px;
+      box-shadow: 0 0 40px rgba(255, 204, 0, 0.3);
       display: flex;
       flex-direction: column;
-      justify-content: flex-start;
-    }
-    .prize {
-      padding: 8px 0;
-      margin: 4px 0;
-      font-size: 1em;
-      display: flex;
       justify-content: space-between;
-    }
-    .active-prize {
-      background: limegreen;
-      font-weight: bold;
-      color: black;
-      border-radius: 5px;
+      font-size: 1.05em;
     }
 
-    /* Dialogs (modals) */
+    .prize {
+      padding: 10px 18px;
+      margin: 3px 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-radius: 8px;
+      transition: all 0.3s;
+      position: relative;
+    }
+
+    .prize::after {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 50%;
+      width: 100%;
+      height: 2px;
+      background: rgba(255,204,0,0.2);
+    }
+
+    .active-prize {
+      background: linear-gradient(#ffcc00, #ffaa00);
+      color: #001f3f;
+      font-weight: 700;
+      box-shadow: 0 0 20px #ffcc00;
+      transform: scale(1.05);
+    }
+
+    /* Modals - dramatic TV style */
     dialog {
-      opacity: 0;
-      transition: opacity 0.4s ease, transform 0.4s ease;
-      transform: translateY(-10px);
-      background: #222;
+      background: linear-gradient(#112233, #001122);
+      border: 5px solid var(--gold);
+      border-radius: 20px;
+      box-shadow: 0 0 60px rgba(255,204,0,0.5);
       color: white;
-      border: 2px solid #0ff;
-      border-radius: 15px;
-      padding: 20px;
-      box-shadow:
-        0 8px 20px rgba(0, 255, 255, 0.2),
-        inset 0 0 10px rgba(0, 255, 255, 0.1);
+      padding: 30px;
+      max-width: 520px;
+      width: 90%;
+      transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+      transform: scale(0.8);
     }
-    dialog.showing {
-      opacity: 1;
-      transform: translateY(0);
+
+    dialog[open] {
+      transform: scale(1);
     }
-    dialog button,
-    dialog input {
-      margin-top: 10px;
-      padding: 8px 16px;
-      border-radius: 12px;
-      border: 2px solid #0ff;
-      background: #333;
-      color: #eee;
-      cursor: pointer;
-      box-shadow: 0 4px 12px rgba(255, 0, 255, 0.3);
-      transition: transform 0.2s, box-shadow 0.2s, background 0.2s;
-    }
-    dialog button:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 8px 24px rgba(255, 0, 255, 0.4);
-      background: #444;
-    }
-    dialog input {
-      width: 60%;
+
+    dialog p {
+      font-size: 1.4em;
       text-align: center;
-      font-size: 1em;
+      margin-bottom: 20px;
+    }
+
+    dialog button {
+      background: linear-gradient(#112233, #001f3f);
+      border: 3px solid var(--neon-cyan);
+      color: white;
+      padding: 14px 32px;
+      font-size: 1.1em;
+      border-radius: 50px;
+      margin: 10px 5px;
+    }
+
+    /* Poll bars for Ask the Audience */
+    .poll-bar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 14px 0;
+      font-size: 1.3em;
+    }
+
+    .poll-label {
+      width: 38px;
+      font-weight: 700;
+      color: var(--neon-cyan);
+    }
+
+    .bar-container {
+      flex: 1;
+      height: 32px;
+      background: #001122;
+      border-radius: 30px;
+      overflow: hidden;
+      border: 2px solid #00ccff;
+    }
+
+    .bar {
+      height: 100%;
+      background: linear-gradient(90deg, #00ccff, #ffcc00);
+      transition: width 1.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .poll-percent {
+      width: 54px;
+      text-align: right;
+      font-weight: 600;
+    }
+
+    /* Confetti canvas sits on top */
+    #confetti {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 9999;
     }
   </style>
 </head>
@@ -257,289 +406,501 @@
 <body>
   <div class="grid-bg"></div>
   <div class="container">
-    <h1>Who Wants to Be a Millionaire</h1>
+    <h1>WHO WANTS TO BE A MILLIONAIRE</h1>
 
     <div class="game-area">
+      <!-- Question panel -->
       <div class="question-box">
-        <div id="timer">Time: --s</div>
-        <div id="question">Loading question...</div>
+        <div class="question-header">
+          <div id="question-number">Question 1 of 15</div>
+          <div id="timer">60s</div>
+        </div>
+        
+        <div id="question">Loading the next question…</div>
+        
         <div class="answers" id="answers"></div>
+        
         <div id="feedback"></div>
+
+        <!-- Lifelines -->
         <div class="lifelines">
-          <button onclick="useFiftyFifty()" id="fifty">50/50</button>
+          <button onclick="useFiftyFifty()" id="fifty">50:50</button>
           <button onclick="usePhoneAFriend()" id="phone">Phone a Friend</button>
-          <button onclick="useNewQuestion()" id="newQ">New Question</button>
+          <button onclick="useAskAudience()" id="audience">Ask the Audience</button>
         </div>
       </div>
 
+      <!-- Prize ladder -->
       <div class="prize-ladder" id="ladder"></div>
     </div>
   </div>
 
-  <!-- Phone a Friend -->
+  <!-- Phone a Friend Modal -->
   <dialog id="friendModal">
-    <p id="friendHelp">Your friend thinks the answer is…</p>
-    <button onclick="closeDialog('friendModal')">Close</button>
+    <p id="friendHelp">Your friend is thinking…</p>
+    <button onclick="closeDialog('friendModal')">Thanks!</button>
+  </dialog>
+
+  <!-- Ask the Audience Modal -->
+  <dialog id="audienceModal">
+    <p>The audience has voted!</p>
+    <div id="pollResults"></div>
+    <button onclick="closeDialog('audienceModal')">Got it</button>
   </dialog>
 
   <!-- Category Selection -->
   <dialog id="categoryModal">
     <p>Select a category:</p>
-    <div id="categoryButtons"></div>
-    <div id="categoryTimer">Auto-select in 5s</div>
+    <div id="categoryButtons" style="display:flex; flex-wrap:wrap; gap:12px; justify-content:center;"></div>
+    <div id="categoryTimer" style="margin-top:20px; text-align:center; font-size:1.1em;">Auto-select in 5s</div>
   </dialog>
 
   <!-- Win Modal -->
   <dialog id="winModal">
-    <p>Congratulations! You've won $1,000,000!</p>
-    <input type="text" id="initials" placeholder="Enter initials" maxlength="3" />
-    <button onclick="saveWinner()">Save</button>
+    <p style="font-size:2.2em; color:#ffcc00;">🎉 YOU'RE A MILLIONAIRE! 🎉</p>
+    <p style="margin:10px 0 20px;">Enter your initials for the Hall of Fame:</p>
+    <input type="text" id="initials" placeholder="ABC" maxlength="3" style="font-size:2em; text-transform:uppercase; width:180px; text-align:center;" />
+    <br>
+    <button onclick="saveWinner()" style="margin-top:15px;">Save &amp; Celebrate</button>
   </dialog>
 
   <!-- Hall of Fame -->
   <dialog id="hallOfFame">
-    <p>Hall of Fame</p>
-    <ul id="winnersList"></ul>
+    <p style="font-size:1.8em; color:#ffcc00;">🏆 Hall of Fame 🏆</p>
+    <ul id="winnersList" style="max-height:340px; overflow-y:auto; padding:0; margin:15px 0; list-style:none; font-size:1.3em;"></ul>
     <button onclick="closeDialog('hallOfFame')">Close</button>
   </dialog>
 
-  <!-- End-of-Game Modal -->
+  <!-- End Game -->
   <dialog id="endModal">
-    <p id="endMessage"></p>
+    <p id="endMessage" style="font-size:2em;"></p>
     <button onclick="restartGame()">Play Again</button>
     <button onclick="closeDialog('endModal')">Quit</button>
   </dialog>
 
+  <!-- Confetti canvas -->
+  <canvas id="confetti"></canvas>
+
   <script>
-    // state
+    // ====================== STATE ======================
     const prizeLevels = [
-      "$100","$200","$300","$500","$1,000",
-      "$2,000","$4,000","$8,000","$16,000","$32,000",
-      "$64,000","$125,000","$250,000","$500,000","$1,000,000"
+      "$100", "$200", "$300", "$500", "$1,000",
+      "$2,000", "$4,000", "$8,000", "$16,000", "$32,000",
+      "$64,000", "$125,000", "$250,000", "$500,000", "$1,000,000"
     ];
+
     const categories = [
-      { id:9,  name:"General Knowledge" },
-      { id:17, name:"Science & Nature" },
-      { id:21, name:"Sports" },
-      { id:22, name:"Geography" },
-      { id:23, name:"History" },
-      { id:11, name:"Entertainment: Film" }
+      { id: 9, name: "General Knowledge" },
+      { id: 17, name: "Science & Nature" },
+      { id: 21, name: "Sports" },
+      { id: 22, name: "Geography" },
+      { id: 23, name: "History" },
+      { id: 11, name: "Entertainment: Film" }
     ];
-    let currentQuestion={}, questionIndex=0, timerId, timeLeft;
 
-    function showDialog(id){
-      const dlg=document.getElementById(id);
-      dlg.classList.add('showing');
-      dlg.showModal();
-    }
-    function closeDialog(id){
-      const dlg=document.getElementById(id);
-      dlg.classList.remove('showing');
-      setTimeout(()=> dlg.close(),400);
-    }
+    let currentQuestion = {};
+    let currentAnswers = [];        // A B C D order
+    let correctIndex = -1;          // index in currentAnswers
+    let questionIndex = 0;
+    let timerId = null;
+    let timeLeft = 60;
+    let fiftyUsed = false;
+    let phoneUsed = false;
+    let audienceUsed = false;
 
-    function shuffle(arr){
-      for(let i=arr.length-1;i>0;i--){
-        const j=Math.floor(Math.random()*(i+1));
-        [arr[i],arr[j]]=[arr[j],arr[i]];
+    // ====================== HELPERS ======================
+    function decode(s) { return he.decode(s); }
+
+    function shuffle(arr) {
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
       }
+      return arr;
     }
-    function decode(s){ return he.decode(s); }
 
-    // Category picker
-    function showCategoryModal(){
-      return new Promise(res=>{
-        const dlg=document.getElementById('categoryModal');
-        const btns=document.getElementById('categoryButtons');
-        btns.innerHTML='';
-        let count=5;
-        document.getElementById('categoryTimer').textContent=`Auto-select in ${count}s`;
+    function showDialog(id) {
+      const dlg = document.getElementById(id);
+      dlg.showModal();
+      // Trigger animation
+      setTimeout(() => dlg.style.transform = 'scale(1)', 10);
+    }
 
-        let copy=categories.slice(); shuffle(copy);
-        let pair=copy.slice(0,2);
-        const cd=setInterval(()=>{
+    function closeDialog(id) {
+      const dlg = document.getElementById(id);
+      dlg.style.transform = 'scale(0.8)';
+      setTimeout(() => dlg.close(), 300);
+    }
+
+    // ====================== CONFETTI ======================
+    let confettiCanvas, confettiCtx, confettiParticles = [];
+    function initConfetti() {
+      confettiCanvas = document.getElementById('confetti');
+      confettiCtx = confettiCanvas.getContext('2d');
+      function resize() {
+        confettiCanvas.width = window.innerWidth;
+        confettiCanvas.height = window.innerHeight;
+      }
+      window.addEventListener('resize', resize);
+      resize();
+
+      // Confetti particle class
+      class Particle {
+        constructor() {
+          this.x = Math.random() * confettiCanvas.width;
+          this.y = Math.random() * confettiCanvas.height - confettiCanvas.height;
+          this.size = Math.random() * 14 + 6;
+          this.speed = Math.random() * 6 + 3;
+          this.angle = Math.random() * 360;
+          this.angleSpeed = Math.random() * 0.04 - 0.02;
+          this.color = ['#ffcc00', '#00f7ff', '#ff00aa', '#00ff88'][Math.floor(Math.random()*4)];
+        }
+        update() {
+          this.y += this.speed;
+          this.angle += this.angleSpeed;
+          this.speed += 0.08;
+        }
+        draw() {
+          confettiCtx.save();
+          confettiCtx.translate(this.x, this.y);
+          confettiCtx.rotate(this.angle);
+          confettiCtx.fillStyle = this.color;
+          confettiCtx.fillRect(-this.size/2, -this.size/2, this.size, this.size);
+          confettiCtx.restore();
+        }
+      }
+
+      function animateConfetti() {
+        confettiCtx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+        confettiParticles.forEach((p, i) => {
+          p.update();
+          p.draw();
+          if (p.y > confettiCanvas.height) confettiParticles.splice(i, 1);
+        });
+        if (confettiParticles.length > 0) requestAnimationFrame(animateConfetti);
+      }
+
+      window.launchConfetti = function() {
+        confettiParticles = [];
+        for (let i = 0; i < 280; i++) {
+          confettiParticles.push(new Particle());
+        }
+        animateConfetti();
+      };
+    }
+
+    // ====================== CATEGORY MODAL ======================
+    async function showCategoryModal() {
+      return new Promise(resolve => {
+        const dlg = document.getElementById('categoryModal');
+        const btnContainer = document.getElementById('categoryButtons');
+        btnContainer.innerHTML = '';
+
+        let count = 5;
+        const timerEl = document.getElementById('categoryTimer');
+        timerEl.textContent = `Auto-select in ${count}s`;
+
+        let copy = categories.slice();
+        shuffle(copy);
+        const pair = copy.slice(0, 2);
+
+        const interval = setInterval(() => {
           count--;
-          document.getElementById('categoryTimer').textContent=`Auto-select in ${count}s`;
-          if(count===0){
-            clearInterval(cd);
+          timerEl.textContent = `Auto-select in ${count}s`;
+          if (count <= 0) {
+            clearInterval(interval);
             closeDialog('categoryModal');
-            res(pair[Math.floor(Math.random()*2)].id);
+            resolve(pair[Math.floor(Math.random() * 2)].id);
           }
-        },1000);
+        }, 1000);
 
-        pair.forEach(c=>{
-          const b=document.createElement('button');
-          b.textContent=c.name;
-          b.onclick=()=>{
-            clearInterval(cd);
+        pair.forEach(cat => {
+          const b = document.createElement('button');
+          b.textContent = cat.name;
+          b.style.padding = '14px 24px';
+          b.style.fontSize = '1.2em';
+          b.style.borderRadius = '50px';
+          b.onclick = () => {
+            clearInterval(interval);
             closeDialog('categoryModal');
-            res(c.id);
+            resolve(cat.id);
           };
-          btns.appendChild(b);
+          btnContainer.appendChild(b);
         });
 
         showDialog('categoryModal');
       });
     }
 
-    // Load next question
-    async function loadQuestion(){
+    // ====================== LOAD QUESTION ======================
+    async function loadQuestion() {
       clearInterval(timerId);
-      if(questionIndex < prizeLevels.length-1){
-        const catId=await showCategoryModal();
-        window.catParam=`&category=${catId}`;
+
+      // Last question is always hard + no category lock
+      if (questionIndex < prizeLevels.length - 1) {
+        const catId = await showCategoryModal();
+        window.catParam = `&category=${catId}`;
       } else {
-        window.catParam='';
+        window.catParam = '';
       }
-      let diff = questionIndex<5 ? 'easy'
-               : questionIndex<10 ? 'medium'
-               : 'hard';
+
+      const diff = questionIndex < 5 ? 'easy' : questionIndex < 10 ? 'medium' : 'hard';
+
       fetch(`https://opentdb.com/api.php?amount=1&type=multiple&difficulty=${diff}${window.catParam}`)
-        .then(r=>r.json()).then(d=>{
-          currentQuestion=d.results[0];
+        .then(r => r.json())
+        .then(data => {
+          currentQuestion = data.results[0];
           displayQuestion();
+        })
+        .catch(() => {
+          document.getElementById('question').innerHTML = "⚠️ Network issue – try again later";
         });
     }
 
-    function displayQuestion(){
+    // ====================== DISPLAY QUESTION ======================
+    function displayQuestion() {
       clearInterval(timerId);
-      document.getElementById('answers').innerHTML='';
       hideFeedback();
 
-      timeLeft = questionIndex<5 ? 60
-               : questionIndex<10 ? 120
-               : 180;
-      document.getElementById('timer').textContent=`Time: ${timeLeft}s`;
-      timerId = setInterval(()=>{
+      // Timer settings (TV drama)
+      timeLeft = questionIndex < 5 ? 45 : questionIndex < 10 ? 90 : 120;
+      const timerEl = document.getElementById('timer');
+      timerEl.textContent = `${timeLeft}s`;
+      timerEl.classList.remove('urgent');
+
+      timerId = setInterval(() => {
         timeLeft--;
-        document.getElementById('timer').textContent=`Time: ${timeLeft}s`;
-        if(timeLeft<=0){ clearInterval(timerId); endGame("Time's up!"); }
-      },1000);
+        timerEl.textContent = `${timeLeft}s`;
+        if (timeLeft <= 10) timerEl.classList.add('urgent');
+        if (timeLeft <= 0) {
+          clearInterval(timerId);
+          endGame("⏰ Time's up!");
+        }
+      }, 1000);
+
+      // Question number
+      document.getElementById('question-number').textContent = `Question ${questionIndex + 1} of 15`;
 
       document.getElementById('question').innerHTML = decode(currentQuestion.question);
+
+      // Prepare A B C D
       let opts = [
-        ...currentQuestion.incorrect_answers.map(a=>decode(a)),
+        ...currentQuestion.incorrect_answers.map(decode),
         decode(currentQuestion.correct_answer)
       ];
       shuffle(opts);
-      opts.forEach(opt=>{
-        const btn=document.createElement('button');
-        btn.textContent=opt;
-        btn.onclick=()=>checkAnswer(opt,btn);
-        document.getElementById('answers').appendChild(btn);
+      currentAnswers = opts;
+      correctIndex = opts.indexOf(decode(currentQuestion.correct_answer));
+
+      // Render beautiful A-B-C-D rows
+      const answersContainer = document.getElementById('answers');
+      answersContainer.innerHTML = '';
+
+      const letters = 'ABCD';
+      opts.forEach((opt, i) => {
+        const row = document.createElement('div');
+        row.className = 'answer-row';
+        row.innerHTML = `
+          <div class="letter">${letters[i]}</div>
+          <div class="answer-text">${opt}</div>
+        `;
+        row.onclick = () => checkAnswer(opt, row, i);
+        answersContainer.appendChild(row);
       });
 
       updateLadder();
     }
 
-    function checkAnswer(choice,btn){
+    // ====================== ANSWER CHECK ======================
+    function checkAnswer(choice, rowElement, chosenIndex) {
       clearInterval(timerId);
       disableAnswers();
-      const correct = decode(currentQuestion.correct_answer);
-      if(choice===correct){
-        showFeedback('Correct!','lime');
-        btn.classList.add('correct');
-        setTimeout(()=>{
+
+      const correctText = decode(currentQuestion.correct_answer);
+
+      if (choice === correctText) {
+        rowElement.classList.add('correct');
+        showFeedback('✅ Correct!', '#ffcc00');
+        setTimeout(() => {
           questionIndex++;
-          if(questionIndex<prizeLevels.length) loadQuestion();
-          else showDialog('winModal');
-        },1500);
-      } else {
-        showFeedback('Wrong!','red');
-        btn.classList.add('incorrect');
-        document.querySelectorAll('#answers button').forEach(b=>{
-          if(b.textContent===correct){
-            b.classList.add('flash-correct');
+          if (questionIndex < prizeLevels.length) {
+            loadQuestion();
+          } else {
+            showWinScreen();
           }
-        });
-        setTimeout(()=> endGame("Wrong answer!"),3000);
+        }, 1600);
+      } else {
+        rowElement.classList.add('incorrect');
+        // Highlight the real correct answer
+        const allRows = document.querySelectorAll('.answer-row');
+        allRows[correctIndex].classList.add('correct');
+        showFeedback('❌ Wrong answer!', '#ff3333');
+        setTimeout(() => endGame("Wrong answer!"), 2200);
       }
     }
 
-    function disableAnswers(){
-      document.querySelectorAll('#answers button').forEach(b=>b.disabled=true);
-    }
-    function showFeedback(msg,color){
-      const f=document.getElementById('feedback');
-      f.textContent=msg; f.style.color=color; f.style.display='block';
-    }
-    function hideFeedback(){
-      document.getElementById('feedback').style.display='none';
+    function disableAnswers() {
+      document.querySelectorAll('.answer-row').forEach(r => r.onclick = null);
     }
 
-    // Lifelines
-    function useFiftyFifty(){
-      const correct=decode(currentQuestion.correct_answer);
-      let removed=0;
-      document.querySelectorAll('#answers button').forEach(b=>{
-        if(b.textContent!==correct && removed<2){
-          b.style.display='none';
+    function showFeedback(text, color) {
+      const f = document.getElementById('feedback');
+      f.style.color = color;
+      f.innerHTML = text;
+    }
+
+    function hideFeedback() {
+      const f = document.getElementById('feedback');
+      f.innerHTML = '';
+    }
+
+    // ====================== LIFELINES ======================
+    function useFiftyFifty() {
+      if (fiftyUsed) return;
+      fiftyUsed = true;
+      document.getElementById('fifty').disabled = true;
+
+      const correctText = decode(currentQuestion.correct_answer);
+      let removed = 0;
+      document.querySelectorAll('.answer-row').forEach(row => {
+        const text = row.querySelector('.answer-text').textContent;
+        if (text !== correctText && removed < 2) {
+          row.style.opacity = '0.15';
+          row.style.pointerEvents = 'none';
           removed++;
         }
       });
-      fifty.disabled=true;
-    }
-    function usePhoneAFriend(){
-      const correct=decode(currentQuestion.correct_answer);
-      const wrongs=currentQuestion.incorrect_answers.map(a=>decode(a));
-      const pick=Math.random()<0.7 ? correct : wrongs[Math.floor(Math.random()*wrongs.length)];
-      document.getElementById('friendHelp').textContent=`Your friend thinks it is: ${pick}`;
-      showDialog('friendModal');
-      phone.disabled=true;
-    }
-    function useNewQuestion(){
-      newQ.disabled=true;
-      loadQuestion();
     }
 
-    // Prize ladder UI
-    function updateLadder(){
-      const lad=document.getElementById('ladder');
-      lad.innerHTML='';
-      prizeLevels.slice().reverse().forEach((p,i)=>{
-        const idx=prizeLevels.length-1-i;
-        const d=document.createElement('div');
-        d.className= idx===questionIndex ? 'prize active-prize' : 'prize';
-        d.textContent=p;
-        lad.appendChild(d);
+    function usePhoneAFriend() {
+      if (phoneUsed) return;
+      phoneUsed = true;
+      document.getElementById('phone').disabled = true;
+
+      const correct = decode(currentQuestion.correct_answer);
+      const wrongs = currentQuestion.incorrect_answers.map(decode);
+      const friendPick = Math.random() < 0.75 ? correct : wrongs[Math.floor(Math.random() * wrongs.length)];
+
+      document.getElementById('friendHelp').innerHTML = `
+        📞 Your friend says:<br>
+        <strong style="color:#ffcc00; font-size:1.4em;">“I’m pretty sure it’s ${friendPick}”</strong>
+      `;
+      showDialog('friendModal');
+    }
+
+    function useAskAudience() {
+      if (audienceUsed) return;
+      audienceUsed = true;
+      document.getElementById('audience').disabled = true;
+
+      // Simulate audience vote – correct answer always most popular
+      let percentages = [22, 24, 19, 35]; // base
+      percentages[correctIndex] += Math.random() * 32 + 18; // big boost
+
+      // Normalize
+      let total = percentages.reduce((a, b) => a + b, 0);
+      percentages = percentages.map(p => Math.round(p / total * 100));
+
+      // Build poll HTML
+      const letters = 'ABCD';
+      let html = '';
+      currentAnswers.forEach((ans, i) => {
+        html += `
+          <div class="poll-bar">
+            <div class="poll-label">${letters[i]}</div>
+            <div class="bar-container"><div class="bar" style="width:0"></div></div>
+            <div class="poll-percent">${percentages[i]}%</div>
+          </div>`;
+      });
+
+      document.getElementById('pollResults').innerHTML = html;
+      showDialog('audienceModal');
+
+      // Animate bars
+      setTimeout(() => {
+        const bars = document.querySelectorAll('.bar');
+        bars.forEach((bar, i) => bar.style.width = percentages[i] + '%');
+      }, 400);
+    }
+
+    // ====================== PRIZE LADDER ======================
+    function updateLadder() {
+      const ladder = document.getElementById('ladder');
+      ladder.innerHTML = `<div style="text-align:center; color:#ffcc00; font-size:1.3em; margin-bottom:12px;">PRIZE LADDER</div>`;
+
+      prizeLevels.slice().reverse().forEach((prize, i) => {
+        const idx = prizeLevels.length - 1 - i;
+        const div = document.createElement('div');
+        div.className = idx === questionIndex ? 'prize active-prize' : 'prize';
+        div.innerHTML = `
+          <span style="font-weight:600;">${prize}</span>
+          <span style="color:#aaa; font-size:0.9em;">${idx + 1}</span>
+        `;
+        ladder.appendChild(div);
       });
     }
 
-    // End game
-    function endGame(msg){
+    // ====================== WIN ======================
+    function showWinScreen() {
+      launchConfetti();
+      showDialog('winModal');
+    }
+
+    function saveWinner() {
+      const initials = document.getElementById('initials').value.trim().toUpperCase();
+      if (!initials || initials.length < 2) return alert("Please enter 2–3 initials!");
+
+      const board = JSON.parse(localStorage.getItem('millionaireWinners') || '[]');
+      board.unshift({
+        initials: initials,
+        date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+        prize: '$1,000,000'
+      });
+      localStorage.setItem('millionaireWinners', JSON.stringify(board.slice(0, 10)));
+      
+      closeDialog('winModal');
+      setTimeout(() => showHallOfFame(), 600);
+    }
+
+    function showHallOfFame() {
+      const board = JSON.parse(localStorage.getItem('millionaireWinners') || '[]');
+      const list = document.getElementById('winnersList');
+      list.innerHTML = board.length 
+        ? board.map(w => `<li style="padding:8px 0; border-bottom:1px solid #334455;">🏆 <strong>${w.initials}</strong> – ${w.date} <span style="float:right; color:#ffcc00;">${w.prize}</span></li>`).join('')
+        : '<li style="opacity:0.5; text-align:center; padding:40px 0;">Be the first millionaire!</li>';
+      showDialog('hallOfFame');
+    }
+
+    // ====================== GAME OVER ======================
+    function endGame(message) {
       clearInterval(timerId);
-      document.getElementById('endMessage').textContent=msg + ' Play again?';
+      document.getElementById('endMessage').innerHTML = `
+        ${message}<br>
+        <span style="font-size:1.3em; color:#ffcc00;">You reached <strong>$${prizeLevels[Math.max(0, questionIndex - 1)] || '$0'}</strong></span>
+      `;
       showDialog('endModal');
     }
-    function restartGame(){
+
+    function restartGame() {
       closeDialog('endModal');
-      questionIndex=0;
-      [fifty,phone,newQ].forEach(b=>b.disabled=false);
+      // Reset everything
+      questionIndex = 0;
+      fiftyUsed = phoneUsed = audienceUsed = false;
+      document.getElementById('fifty').disabled = false;
+      document.getElementById('phone').disabled = false;
+      document.getElementById('audience').disabled = false;
       loadQuestion();
     }
 
-    // Hall of Fame
-    function saveWinner(){
-      const ini=document.getElementById('initials').value.trim().toUpperCase();
-      if(!ini) return;
-      const board=JSON.parse(localStorage.getItem('winners')||'[]');
-      board.push({initials:ini, date:new Date().toLocaleDateString()});
-      localStorage.setItem('winners', JSON.stringify(board));
-      closeDialog('winModal');
-      showHallOfFame();
-    }
-    function showHallOfFame(){
-      const board=JSON.parse(localStorage.getItem('winners')||'[]');
-      document.getElementById('winnersList').innerHTML=
-        board.map(w=>`<li>${w.initials} – ${w.date}</li>`).join('');
-      showDialog('hallOfFame');
-    }
-    document.getElementById('hallOfFame')
-      .addEventListener('close', ()=> endGame("Great job!"));
-
-    // Kick things off
-    loadQuestion();
+    // ====================== START ======================
+    window.onload = function() {
+      initConfetti();
+      // Hall of Fame close handler
+      document.getElementById('hallOfFame').addEventListener('close', () => {
+        endGame("Thanks for playing!");
+      });
+      loadQuestion();
+    };
   </script>
 </body>
 </html>
-```
