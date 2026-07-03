@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>OBSCURA</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { overflow:hidden; background:#000; font-family:'VT323',monospace; color:#0f0; }
+        canvas { display:block; }
+        #hud { position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:10; }
+        #crosshair { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); font-size:84px; color:#ffd700; text-shadow:0 0 4px #ffd700; pointer-events:none; user-select:none; }
+        .info-box { position:absolute; background:rgba(0,0,0,0.9); border:4px solid #ffd700; padding:24px; color:#ffd700; font-size:32px; text-shadow:0 0 4px #ffd700; pointer-events:none; user-select:none; }
+        #top-info { top:20px; left:20px; min-width:200px; }
+        #room-coord { font-size:24px; color:#aaa; }
+        #inventory-info { top:20px; right:20px; max-width:400px; }
+        #inv-list { font-size:24px; margin-top:8px; color:#90ee90; }
+        #room-info { top:140px; left:20px; max-width:500px; }
+        #room-desc { font-size:24px; }
+        #stats-info { bottom:80px; left:20px; font-size:28px; border-color:#0f0; color:#0f0; text-shadow:0 0 4px #0f0; padding:20px; }
+        #fps-counter { position:absolute; bottom:20px; right:20px; background:rgba(0,0,0,0.9); color:#0f0; padding:16px 28px; border:4px solid #0f0; font-size:28px; font-family:'Courier New',monospace; z-index:100; text-shadow:0 0 4px #0f0; pointer-events:none; user-select:none; }
+        #map-container { position:absolute; bottom:220px; left:20px; z-index:15; pointer-events:none; user-select:none; }
+        #minimap { width:200px; height:200px; border:3px solid #ffd700; background:#0a0a1a; image-rendering:pixelated; }
+        #pickup-prompt, #talk-prompt { display:none; position:absolute; bottom:160px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,0.85); border:2px solid #ffd700; padding:12px 28px; color:#ffd700; font-size:28px; z-index:26; text-align:center; pointer-events:none; user-select:none; white-space:nowrap; }
+        #pickup-prompt.show, #talk-prompt.show { display:block; }
+        #pickup-msg { display:none; position:absolute; bottom:220px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,0.92); border:4px solid #ffd700; padding:20px 40px; color:#ffd700; font-size:28px; z-index:25; text-align:center; pointer-events:none; user-select:none; white-space:nowrap; }
+        #pickup-msg.show { display:block; animation:msgFade 2.5s forwards; }
+        @keyframes msgFade { 0%{opacity:0;transform:translateX(-50%) translateY(20px);} 15%{opacity:1;transform:translateX(-50%) translateY(0);} 85%{opacity:1;transform:translateX(-50%) translateY(0);} 100%{opacity:0;transform:translateX(-50%) translateY(-20px);} }
+        #door-msg { display:none; position:absolute; top:32%; left:50%; transform:translate(-50%,-50%); width:720px; background:rgba(0,0,0,0.97); border:4px solid #ffd700; padding:32px 40px; color:#ffd700; font-size:30px; z-index:35; text-align:center; pointer-events:none; user-select:none; line-height:1.5; }
+        #door-msg.show { display:block; animation:fadeInOut 3.5s forwards; }
+        @keyframes fadeInOut { 0%{opacity:0} 8%{opacity:1} 80%{opacity:1} 100%{opacity:0} }
+        #start-screen { position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,10,30,0.98); display:flex; align-items:center; justify-content:center; flex-direction:column; z-index:20; color:#ffd700; text-align:center; }
+        h1 { font-size:128px; margin:0; text-shadow:0 0 20px #ffd700; }
+        button { font-family:'VT323',monospace; font-size:48px; padding:24px 60px; background:#000; border:4px solid #ffd700; color:#ffd700; cursor:pointer; margin:10px; transition:0.2s; }
+        button:hover { background:#ffd700; color:#000; pointer-events:auto; }
+        .scanline { position:absolute; top:0; left:0; width:100%; height:100%; background:linear-gradient(transparent,rgba(255,215,0,0.03) 50%,transparent); pointer-events:none; animation:scan 4s linear infinite; }
+        @keyframes scan { 0%{transform:translateY(-100%)} 100%{transform:translateY(300%)} }
+        #message { display:none; position:absolute; top:40%; left:50%; transform:translate(-50%,-50%); width:800px; background:rgba(0,15,35,0.95); border:6px solid #ffd700; padding:40px; color:#ffd700; font-size:36px; z-index:30; text-align:center; box-shadow:0 0 40px #ffd700; pointer-events:none; user-select:none; }
+        #message.show { display:block; animation:fadeInOut 3s forwards; }
+        #dialogue-box { display:none; position:absolute; bottom:60px; left:50%; transform:translateX(-50%); width:860px; background:rgba(0,0,0,0.97); border:4px solid #ffd700; padding:36px 44px; z-index:50; color:#ffd700; pointer-events:auto; font-size:30px; line-height:1.6; }
+        #dialogue-box.active { display:block; }
+        #dialogue-speaker { font-size:26px; color:#90ee90; margin-bottom:12px; text-transform:uppercase; letter-spacing:2px; }
+        #dialogue-text { margin-bottom:28px; }
+        #dialogue-choices button { font-family:'VT323',monospace; font-size:28px; padding:12px 28px; background:#000; border:2px solid #ffd700; color:#ffd700; cursor:pointer; text-align:left; transition:0.15s; }
+        #dialogue-choices button:hover { background:#ffd700; color:#000; }
+        #dialogue-choices button .choice-key { display:inline-block; width:32px; height:32px; line-height:32px; background:#ffd700; color:#000; text-align:center; margin-right:12px; font-size:24px; }
+        #dialogue-close { display:none; font-family:'VT323',monospace; font-size:28px; padding:12px 28px; background:#000; border:2px solid #555; color:#888; cursor:pointer; margin-top:10px; transition:0.15s; }
+        #dialogue-close:hover { border-color:#ffd700; color:#ffd700; }
+        #dice-overlay { display:none; position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:60; justify-content:center; align-items:center; }
+        #dice-overlay.active { display:flex; }
+        #dice-panel { background:rgba(10,10,30,0.95); border:6px solid #ffd700; padding:50px 70px; text-align:center; color:#ffd700; font-size:36px; min-width:500px; position:relative; }
+        #dice-canvas { width:150px; height:150px; margin:20px auto; }
+        #dice-stat { color:#90ee90; font-size:28px; margin-bottom:20px; }
+        #dice-dc { color:#ffd700; margin-bottom:30px; }
+        #dice-result { font-size:64px; margin:30px 0; min-height:80px; }
+        #dice-button { font-family:'VT323',monospace; font-size:40px; padding:20px 50px; background:#000; border:4px solid #ffd700; color:#ffd700; cursor:pointer; transition:0.2s; }
+        #dice-button:hover { background:#ffd700; color:#000; }
+        #dice-close { display:none; font-family:'VT323',monospace; font-size:28px; padding:10px 30px; background:#000; border:2px solid #555; color:#888; cursor:pointer; margin-top:20px; transition:0.15s; }
+        #dice-close:hover { border-color:#ffd700; color:#ffd700; }
+        #dice-instruction { font-size:24px; color:#aaa; margin-top:10px; }
+        #narration-popup { display:none; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:860px; background:rgba(0,10,30,0.95); border:4px solid #ffd700; padding:40px; z-index:70; color:#ffd700; font-size:28px; text-align:center; line-height:1.6; pointer-events:auto; }
+        #narration-text { margin-bottom:30px; white-space:pre-wrap; }
+        #narration-stop { font-family:'VT323',monospace; font-size:30px; padding:12px 36px; background:#000; border:2px solid #ffd700; color:#ffd700; cursor:pointer; transition:0.15s; }
+        #narration-stop:hover { background:#ffd700; color:#000; }
+        #narrator-hud-btn { display:none; position:absolute; top:20px; right:200px; z-index:80; font-family:'VT323',monospace; font-size:24px; padding:8px 18px; background:rgba(0,0,0,0.85); border:2px solid #ffd700; color:#ffd700; cursor:pointer; pointer-events:auto; transition:0.15s; }
+        #narrator-hud-btn:hover { background:#ffd700; color:#000; }
+        #loading-screen { position:absolute; top:0; left:0; width:100%; height:100%; background:#000; display:flex; align-items:center; justify-content:center; z-index:100; color:#ffd700; font-size:48px; }
+    </style>
+</head>
+<body>
+<div id="loading-screen">Loading assets…</div>
+<div id="hud">
+    <div id="crosshair">+</div>
+    <div class="info-box" id="top-info">
+        <div id="room-name">Empty Room</div>
+        <div id="room-coord">Zone [0,0]</div>
+    </div>
+    <div id="map-container">
+        <canvas id="minimap" width="200" height="200"></canvas>
+    </div>
+    <div class="info-box" id="stats-info">
+        <div>WILL: <span id="stat-will">4</span> | CURI: <span id="stat-curi">4</span> | CHARM: <span id="stat-charm">4</span></div>
+        <div style="font-size:20px;color:#aaa;">SPITE: <span id="stat-spite">0</span></div>
+    </div>
+    <div class="info-box" id="inventory-info">
+        <div>INVENTORY</div>
+        <div id="inv-list">Empty</div>
+    </div>
+    <div class="info-box" id="room-info">
+        <div id="room-desc"></div>
+    </div>
+    <div id="fps-counter">FPS: <span id="fps-value">60</span></div>
+    <div id="pickup-prompt">[E] Pick up</div>
+    <div id="pickup-msg"></div>
+    <div id="door-msg"></div>
+    <div id="talk-prompt">[E] Talk</div>
+    <button id="narrator-hud-btn" onclick="stopNarration()">Stop Narration</button>
+</div>
+<div id="dialogue-box">
+    <div id="dialogue-speaker"></div>
+    <div id="dialogue-text"></div>
+    <div id="dialogue-choices"></div>
+    <button id="dialogue-close" onclick="closeDialogue()">[Close]</button>
+</div>
+<div id="dice-overlay">
+    <div id="dice-panel">
+        <div id="dice-stat"></div>
+        <div id="dice-dc"></div>
+        <canvas id="dice-canvas" width="150" height="150"></canvas>
+        <div id="dice-result"></div>
+        <button id="dice-button" onclick="rollDiceNow()">ROLL THE DIE</button>
+        <button id="dice-close" onclick="closeDiceOverlay()">Continue</button>
+        <div id="dice-instruction">Press SPACE / R to roll, same to continue</div>
+    </div>
+</div>
+<div id="narration-popup">
+    <div id="narration-text"></div>
+    <button id="narration-stop" onclick="stopNarration()">Stop Narration</button>
+</div>
+<div id="start-screen">
+    <div>
+        <h1>OBSCURA</h1>
+        <p style="font-size:64px;margin:20px 0;">The Pavilion awaits.</p>
+        <p style="font-size:40px;margin:20px 0;color:#90ee90;">Step inside.</p>
+        <button onclick="startGame()" id="start-btn" style="display:none;">BEGIN EXPLORATION</button>
+    </div>
+    <div class="scanline"></div>
+</div>
+<div id="message"></div>
+
+<!-- Libraries -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.134.0/examples/js/loaders/GLTFLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.134.0/examples/js/utils/BufferGeometryUtils.js"></script>
+
+<!-- Define GRID_SIZE before data files that need it -->
+<script>const GRID_SIZE = 5;</script>
+
+<!-- Game data -->
+<script src="data/doors.js"></script>
+<script src="data/items.js"></script>
+<script src="data/npcs.js"></script>
+<script src="data/rooms.js"></script>
+
+<!-- Engine modules (order matters) -->
+<script src="engine/globals.js"></script>
+<script src="engine/dice.js"></script>
+<script src="engine/doors.js"></script>
+<script src="engine/entities.js"></script>
+<script src="engine/animations.js"></script>
+<script src="engine/hud.js"></script>
+<script src="engine/controls.js"></script>
+<script src="engine/world.js"></script>
+<script src="engine/core.js"></script>
+
+</body>
+</html>
