@@ -2,6 +2,12 @@
 // THE PAVILION OF FALSE HORIZONS – WORLD BUILDER
 // =============================================================
 
+// Self‑contained helper – does not depend on controls.js
+function getRoomCoordsLocal(roomKey) {
+    const p = roomKey.split(',');
+    return { rx: parseInt(p[0]) - 1, rz: parseInt(p[1]) - 1 };
+}
+
 async function loadAllTextures() {
     const floorTex = textureCache['assets/floor.png'] || await loadTexture('assets/floor.png');
     const ceilingTex = textureCache['assets/ceiling.png'] || await loadTexture('assets/ceiling.png');
@@ -11,19 +17,6 @@ async function loadAllTextures() {
         walls[i] = textureCache[key] || await loadTexture(key);
     }
     return { floor: floorTex, ceiling: ceilingTex, walls };
-}
-
-function mergeMeshes(meshes) {
-    if (meshes.length === 0) return null;
-    const geometries = meshes.map(m => {
-        const geo = m.geometry.clone();
-        geo.applyMatrix4(m.matrixWorld);
-        return geo;
-    });
-    const merged = THREE.BufferGeometryUtils.mergeBufferGeometries(geometries, false);
-    const material = meshes[0].material;
-    const mergedMesh = new THREE.Mesh(merged, material);
-    return mergedMesh;
 }
 
 async function buildWorld(){
@@ -37,14 +30,13 @@ async function buildWorld(){
     window.hedgeBlocks = [];
     window.robin = null;
     window.snowParticles = [];
-
-    // Clear animation arrays using the globals from globals.js
     pendulumObjects.length = 0;
     cuckoos.length = 0;
 
     greenDoorTex = textureCache['assets/green_door.png'] || await loadTexture('assets/green_door.png');
     blackDoorTex = textureCache['assets/black_door.png'] || await loadTexture('assets/black_door.png');
 
+    // 1. ROOMS (walls + floors)
     for(let rx=0;rx<GRID_SIZE;rx++) for(let rz=0;rz<GRID_SIZE;rz++){
         const roomKey=`${rx+1},${rz+1}`,room=ROOMS[roomKey];if(!room)continue;
         const cx=rx*ROOM_SIZE+ROOM_SIZE/2,cz=rz*ROOM_SIZE+ROOM_SIZE/2;
@@ -73,7 +65,9 @@ async function buildWorld(){
         ].forEach(p=>addCollider(p[0],p[1],p[2],p[3],p[4],p[5]));
     }
 
-    // ----- STUDY (3,3) STATIC PROPS -----
+    // 2. STATIC PROPS
+
+    // Study (3,3)
     const studyCX = 2*ROOM_SIZE+ROOM_SIZE/2, studyCZ = 2*ROOM_SIZE+ROOM_SIZE/2;
     const libDesk = await loadModelOrFallback('assets/library_desk.glb', async () => {
         return await createStaticPlane('assets/library_desk.png', 4, 3, { x: studyCX+5, y: 0, z: studyCZ+ROOM_SIZE/2-4 }, Math.PI);
@@ -83,7 +77,6 @@ async function buildWorld(){
     scene.add(libDesk); worldObjects.push(libDesk);
     addCollider(studyCX+5, 1.0, studyCZ+ROOM_SIZE/2-2, 4, 3, 0.5);
 
-    // Fireplace with tight cylinder collider (replaces old huge box)
     const fire = await loadModelOrFallback('assets/blue_fireplace.glb', async () => {
         const tex = await loadTexture('assets/blue_fireplace.png');
         const plane = new THREE.Mesh(new THREE.PlaneGeometry(4,4), new THREE.MeshBasicMaterial({ map: tex, transparent: true, side: THREE.DoubleSide }));
@@ -95,10 +88,9 @@ async function buildWorld(){
     fire.rotation.y = Math.PI/4;
     fire.scale.multiplyScalar(1.5);
     scene.add(fire); worldObjects.push(fire);
-    // Tight cylinder collider (radius 1.5, height 3)
     addCylinderCollider(studyCX - ROOM_SIZE/2 + 4, 1.5, studyCZ - ROOM_SIZE/2 + 4, 1.5, 3);
 
-    // Ballroom floating props
+    // Ballroom (2,3) – floating props, no collision
     const ballCX = 1*ROOM_SIZE+ROOM_SIZE/2, ballCZ = 2*ROOM_SIZE+ROOM_SIZE/2;
     for (let i=0;i<2;i++) {
         const chanTex = await loadSpriteTexture('assets/chandelier.png','Chandelier','#ffd700');
@@ -116,7 +108,7 @@ async function buildWorld(){
         floatAnimations.push({ mesh:chairMesh, baseY:pos.y, amplitude:0.25, speed:1.8+i*0.2, offset:i*0.7 });
     }
 
-    // Gallery easels (1,3)
+    // Gallery (1,3)
     const galCX = 0*ROOM_SIZE+ROOM_SIZE/2, galCZ = 2*ROOM_SIZE+ROOM_SIZE/2;
     for (let i=0;i<2;i++) {
         const x = galCX + (i===0 ? -4 : 4);
@@ -134,7 +126,7 @@ async function buildWorld(){
         easelModels[i] = easel; easelColliders[i] = colMesh;
     }
 
-    // Nursery (2,4) – desk moved to NE corner
+    // Nursery (2,4)
     const nurseryCX = 1*ROOM_SIZE+ROOM_SIZE/2, nurseryCZ = 3*ROOM_SIZE+ROOM_SIZE/2;
     const desk = await loadModelOrFallback('assets/Gesso_desk.glb', async () => {
         return await createStaticPlane('assets/Gesso_desk.png', 6, 3.75, { x:nurseryCX+ROOM_SIZE/2-4, y:0, z:nurseryCZ+ROOM_SIZE/2-4 }, -Math.PI/4);
@@ -169,7 +161,7 @@ async function buildWorld(){
     scene.add(trash); worldObjects.push(trash);
     addCollider(nurseryCX-7, 1.5, nurseryCZ-7, 4, 3, 4);
 
-    // ---- Court of the Faceless Queen (4,3) marble bench ----
+    // Court (4,3) – Queen’s bench (tall enough to block)
     const courtCX = 3*ROOM_SIZE+ROOM_SIZE/2, courtCZ = 2*ROOM_SIZE+ROOM_SIZE/2;
     const bench = await loadModelOrFallback('assets/marble_bench.glb', async () => {
         return await createStaticPlane('assets/marble_bench.png', 3, 2, { x: courtCX, y: 0, z: courtCZ + 2 }, 0);
@@ -177,9 +169,9 @@ async function buildWorld(){
     bench.position.set(courtCX, 0, courtCZ -1);
     bench.scale.set(3, 3, 3);
     scene.add(bench); worldObjects.push(bench);
-    addCollider(courtCX, 0.5, courtCZ + 2, 3, 1, 2);
+    addCylinderCollider(courtCX, 1.0, courtCZ -1, 2.0, 2.0);
 
-    // ---- Aviary (3,4) glass hummingbirds ----
+    // Aviary (3,4) – hummingbirds, no solid colliders
     const aviaryCX = 2*ROOM_SIZE+ROOM_SIZE/2, aviaryCZ = 3*ROOM_SIZE+ROOM_SIZE/2;
     const roomMinX = aviaryCX - ROOM_SIZE/2 + 1, roomMaxX = aviaryCX + ROOM_SIZE/2 - 1;
     const roomMinZ = aviaryCZ - ROOM_SIZE/2 + 1, roomMaxZ = aviaryCZ + ROOM_SIZE/2 - 1;
@@ -205,7 +197,7 @@ async function buildWorld(){
         });
     }
 
-    // ---- Room 4-4 Hedge Maze ----
+    // Hedge Maze (4,4) – blocks with moving colliders
     const hedgeCX = 3*ROOM_SIZE+ROOM_SIZE/2, hedgeCZ = 3*ROOM_SIZE+ROOM_SIZE/2;
     const hedgePositions = [
         { x: hedgeCX-5, z: hedgeCZ-5, angle: 0 },
@@ -221,17 +213,24 @@ async function buildWorld(){
         hb.rotation.y = hedgePositions[i].angle;
         hb.scale.set(1.5, 1.5, 3.0);
         scene.add(hb); worldObjects.push(hb);
-        addCollider(hedgePositions[i].x, 0.5, hedgePositions[i].z, 5, 1, 6);
+        // Moving collider
+        const colMesh = new THREE.Mesh(new THREE.BoxGeometry(5, 1, 6), new THREE.MeshBasicMaterial({visible:false}));
+        colMesh.position.copy(hb.position);
+        colMesh.rotation.y = hb.rotation.y;
+        scene.add(colMesh); worldObjects.push(colMesh);
+        colliders.push({ pos: colMesh.position.clone(), size: new THREE.Vector3(2.5, 0.5, 3), mesh: colMesh, type:'box' });
         window.hedgeBlocks.push({
             mesh: hb,
-            baseX: hedgePositions[i].x, baseZ: hedgePositions[i].z,
+            colliderMesh: colMesh,
+            baseX: hedgePositions[i].x,
+            baseZ: hedgePositions[i].z,
             phase: i * Math.PI/2,
             speed: 0.3,
             amplitude: 2.0
         });
     }
 
-    // ---- Room 5-3 Graveyard: key plants (scaled up) ----
+    // Graveyard (5,3) – key plants
     const graveCX = 4*ROOM_SIZE+ROOM_SIZE/2, graveCZ = 2*ROOM_SIZE+ROOM_SIZE/2;
     const keyPlantTexs = ['key_plant.png', 'key_plant2.png', 'key_plant3.png'];
     for (let i=0; i<25; i++) {
@@ -246,7 +245,6 @@ async function buildWorld(){
         billboards.push(plantMesh);
     }
 
-    // ---- Room 5-3 Robin ----
     const robinTex = await loadSpriteTexture('assets/robin.png', 'Robin', '#ff8c00');
     const robinMesh = new THREE.Mesh(new THREE.PlaneGeometry(0.8, 0.8), new THREE.MeshBasicMaterial({ map: robinTex, transparent: true, side: THREE.DoubleSide, depthWrite: false }));
     robinMesh.position.set(graveCX - 2, 0.4, graveCZ + 2);
@@ -261,7 +259,7 @@ async function buildWorld(){
         hopHeight: 0.6
     };
 
-    // ---- Room 4-2 Wardrobe ----
+    // Wardrobe (4,2)
     const wardrobeCX = 3*ROOM_SIZE+ROOM_SIZE/2, wardrobeCZ = 1*ROOM_SIZE+ROOM_SIZE/2;
     const backWallTex = await loadTexture('assets/4-2_back_wall.png');
     const backWall = new THREE.Mesh(new THREE.PlaneGeometry(ROOM_SIZE, WALL_HEIGHT), new THREE.MeshLambertMaterial({ map: backWallTex, color: 0xffffff, side: THREE.DoubleSide }));
@@ -303,7 +301,7 @@ async function buildWorld(){
     billboards.push(cloudMesh);
     floatAnimations.push({ mesh: cloudMesh, baseY: 5.5, amplitude: 0.5, speed: 0.8, offset: 0 });
 
-    // ---- Room 2-5 Cuckoo birds ----
+    // Cuckoo birds (2,5)
     const clockCX = 1*ROOM_SIZE+ROOM_SIZE/2, clockCZ = 4*ROOM_SIZE+ROOM_SIZE/2;
     const cuckooTexKeys = ['green_cuckoo.png', 'orange_cuckoo.png', 'pride_cuckoo.png'];
     const cuckooPositions = [
@@ -318,6 +316,7 @@ async function buildWorld(){
         mesh.position.set(pos.x, 1.5, pos.z);
         mesh.scale.set(0.666, 0.666, 0.666);
         scene.add(mesh); worldObjects.push(mesh);
+        billboards.push(mesh);
         cuckoos.push({
             mesh,
             baseX: pos.x,
@@ -326,34 +325,45 @@ async function buildWorld(){
             phase: i * 2.0,
             speed: 0.8,
             amplitude: 0.4,
-            bobAmp: 0.0   // no vertical bounce in animation (ignored now)
+            bobAmp: 0.0
         });
     }
 
-    // ---- NPCs (all) ----
-    for(const npcData of Object.values(NPCS)) {
-        const rc = getRoomCoords(npcData.roomKey);
-        const baseX = rc.rx*ROOM_SIZE+ROOM_SIZE/2 + (npcData.position.x||0);
-        const baseZ = rc.rz*ROOM_SIZE+ROOM_SIZE/2 + (npcData.position.z||0);
+    // 3. NPCS (using local getRoomCoords)
+    const npcEntries = Object.values(NPCS);
+    for (let i = 0; i < npcEntries.length; i++) {
+        const npcData = npcEntries[i];
+        if (!npcData || !npcData.roomKey) {
+            console.warn('Skipping NPC (missing data or roomKey):', npcData ? npcData.id : '(undefined)');
+            continue;
+        }
+
+        const rc = getRoomCoordsLocal(npcData.roomKey);
+        if (!rc) {
+            console.warn('Invalid roomKey for NPC:', npcData.id, npcData.roomKey);
+            continue;
+        }
+        const baseX = rc.rx * ROOM_SIZE + ROOM_SIZE / 2 + (npcData.position.x || 0);
+        const baseZ = rc.rz * ROOM_SIZE + ROOM_SIZE / 2 + (npcData.position.z || 0);
         const scale = npcData.scale || 2.5;
 
         const npc = await loadModelOrFallback(npcData.glb, async () => {
             const tex = await loadSpriteTexture(npcData.texture, npcData.name, '#334466');
             const geo = new THREE.PlaneGeometry(scale, scale);
-            const mat = new THREE.MeshBasicMaterial({ map:tex, transparent:true, side:THREE.DoubleSide, depthWrite:false });
+            const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, side: THREE.DoubleSide, depthWrite: false });
             const mesh = new THREE.Mesh(geo, mat);
-            mesh.position.set(baseX, npcData.position.y||1.8, baseZ);
+            mesh.position.set(baseX, npcData.position.y || 1.8, baseZ);
             billboards.push(mesh);
             return mesh;
         }, npcData.materialConfig || {});
+
         if (npcData.glbScale) { const s = npcData.glbScale; npc.scale.set(s, s, s); }
         if (npcData.glbRotation) { npc.rotation.y = npcData.glbRotation; }
-        npc.position.set(baseX, npcData.position.y||1.8, baseZ);
+        npc.position.set(baseX, npcData.position.y || 1.8, baseZ);
 
-        // Grand Pendulum swing
         if (npcData.id === 'Grand_Pendulum') {
             npc.position.y += 1.0;
-            pendulumObjects.push({ mesh: npc, phase: Math.random()*Math.PI*2 });
+            pendulumObjects.push({ mesh: npc, phase: Math.random() * Math.PI * 2 });
         }
 
         scene.add(npc); worldObjects.push(npc); npcMeshes.set(npc, npcData.id);
@@ -361,39 +371,42 @@ async function buildWorld(){
         const radius = npcData.colliderRadius || (scale * 0.5);
         const height = scale * 0.9;
         addCylinderCollider(baseX, npcData.position.y, baseZ, radius, height);
-        const cylinder = colliders[colliders.length-1];
-        npcData.collider = cylinder;
+        const cylinder = colliders[colliders.length - 1];
 
         if (npcData.floatBounce) {
-            floatAnimations.push({ mesh: npc, baseY: npcData.position.y, amplitude: npcData.floatBounce.amplitude, speed: npcData.floatBounce.speed, offset: Math.random()*Math.PI*2 });
+            floatAnimations.push({ mesh: npc, baseY: npcData.position.y, amplitude: npcData.floatBounce.amplitude, speed: npcData.floatBounce.speed, offset: Math.random() * Math.PI * 2 });
         }
         if (npcData.wander) {
             wanderAnimations.push({
-                mesh: npc, collider: cylinder, roomKey: npcData.roomKey,
+                mesh: npc,
+                collider: cylinder,
+                roomKey: npcData.roomKey,
                 basePos: new THREE.Vector3(baseX, npcData.position.y, baseZ),
-                speed: npcData.wander.speed, radius: npcData.wander.radius,
-                timer:0, targetPos: new THREE.Vector3(baseX, npcData.position.y, baseZ),
-                active:true, heading: 0,
+                speed: npcData.wander.speed,
+                radius: npcData.wander.radius,
+                timer: 0,
+                targetPos: new THREE.Vector3(baseX, npcData.position.y, baseZ),
+                active: true,
+                heading: 0,
                 vertical: npcData.verticalWander || false,
                 verticalBase: npcData.verticalWander ? 2.5 : npcData.position.y
             });
         }
     }
 
-    // ---- Room 1-5 Stone Tablet (halved distance) ----
-    const epitaphistRoom = getRoomCoords('1,5');
-    const tabletCX = epitaphistRoom.rx*ROOM_SIZE+ROOM_SIZE/2;
-    const tabletCZ = epitaphistRoom.rz*ROOM_SIZE+ROOM_SIZE/2;
+    // Stone Tablet (1,5)
+    const tabletCX = 0 * ROOM_SIZE + ROOM_SIZE / 2;
+    const tabletCZ = 4 * ROOM_SIZE + ROOM_SIZE / 2;
     const tabletModel = await loadModelOrFallback('assets/stonetablet.glb', async () => {
         return await createStaticPlane('assets/stonetablet.png', 3, 4, { x: tabletCX+1.5, y: 0, z: tabletCZ+1.5 }, 0);
     });
-    tabletModel.position.set(tabletCX+1.5, 0, tabletCZ+1.5);   // was +3, now +1.5
+    tabletModel.position.set(tabletCX+1.5, 0, tabletCZ+1.5);
     tabletModel.rotation.y = Math.PI;
     tabletModel.scale.set(2.5, 2.5, 2.5);
     scene.add(tabletModel); worldObjects.push(tabletModel);
     addCollider(tabletCX+1.5, 1.5, tabletCZ+1.5, 3, 4, 1);
 
-    // ---- Room 1-4 Hungry plants ----
+    // Hungry plants (1,4)
     const conservCX = 0*ROOM_SIZE+ROOM_SIZE/2;
     const conservCZ = 3*ROOM_SIZE+ROOM_SIZE/2;
     const plantTexKeys = ['hungry_tree.png', 'hungry_lilly.png', 'hungry_rose.png', 'hungry_sunflower.png'];

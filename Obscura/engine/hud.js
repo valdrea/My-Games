@@ -2,273 +2,7 @@
 // HUD – UI updates, narration, dialogue, voice lines
 // =============================================================
 
-/* ------------------------------------------------------------------ */
-/*  GLOBAL AUDIO QUEUE – ensures only one voice plays at a time       */
-/* ------------------------------------------------------------------ */
-let audioQueue = [];                  // queued items { path, freeze, resolve, reject }
-let currentAudio = null;              // currently playing Audio element
-let currentAudioFreeze = false;       // whether the current audio freezes the player
-
-function stopCurrentAudio() {
-    if (currentAudio) {
-        currentAudio.pause();
-        currentAudio = null;
-        playerFrozen = false;         // unfreeze just in case
-        currentAudioFreeze = false;
-    }
-}
-
-/** Start the next item in the queue (if any) */
-function processQueue() {
-    if (audioQueue.length === 0) return;
-    const item = audioQueue.shift();
-    const { path, freeze, resolve, reject } = item;
-    const audio = new Audio(path);
-    audio.onended = () => {
-        if (currentAudio === audio) {
-            currentAudio = null;
-            if (currentAudioFreeze) playerFrozen = false;
-            currentAudioFreeze = false;
-            resolve();
-            processQueue();
-        }
-    };
-    audio.onerror = () => {
-        // If file missing, still resolve and continue
-        if (currentAudio === audio) {
-            currentAudio = null;
-            if (currentAudioFreeze) playerFrozen = false;
-            currentAudioFreeze = false;
-            resolve();
-            processQueue();
-        }
-    };
-    // Pause any previous audio (shouldn't happen if queue is sequential, but safety)
-    if (currentAudio) stopCurrentAudio();
-    audio.play().catch(err => {
-        // Browser may block autoplay – treat as resolved
-        if (currentAudio === audio) {
-            currentAudio = null;
-            if (currentAudioFreeze) playerFrozen = false;
-            currentAudioFreeze = false;
-            resolve();
-            processQueue();
-        }
-    });
-    currentAudio = audio;
-    currentAudioFreeze = freeze;
-    if (freeze) playerFrozen = true;
-}
-
-/**
- * Enqueue an audio file. Returns a Promise that resolves when playback finishes.
- * @param {string}  path   – URL to the audio file
- * @param {boolean} freeze – if true, freeze player movement during playback
- */
-function enqueueAudio(path, freeze = true) {
-    return new Promise((resolve, reject) => {
-        audioQueue.push({ path, freeze, resolve, reject });
-        if (!currentAudio) processQueue();  // start playing if idle
-    });
-}
-
-/** Skip the current audio (spacebar) */
-function skipCurrentAudio() {
-    if (currentAudio) {
-        // Force end – this will trigger onended and continue the queue
-        currentAudio.pause();
-        currentAudio.currentTime = currentAudio.duration || 0;
-        // onended will fire and clean up
-        // Also unfreeze immediately
-        if (currentAudioFreeze) playerFrozen = false;
-        currentAudioFreeze = false;
-        // The onended handler will set currentAudio = null, resolve, and process next
-    }
-}
-
-/* ------------------------------------------------------------------ */
-/*  VOICE MAPPINGS                                                     */
-/* ------------------------------------------------------------------ */
-const DIALOGUE_VOICE_MAP = {
-    Origami_Crow: {
-        start: 'Barnaby_greeting',
-        explain_name: 'Barnaby_explain_name',
-        whoami: 'Barnaby_who_are_you',
-        exit: 'Barnaby_door_hint',
-        quest: 'Barnaby_quest_offer',
-        compass: 'Barnaby_compass_cost',
-        give_compass: 'Barnaby_compass_given',
-        examine_sphere: 'Barnaby_sphere_puzzle',
-        done: 'Barnaby_farewell'
-    },
-    Baron_von_Bounce: {
-        start: 'Baron_greeting',
-        explain_ballroom: 'Baron_explain_ballroom',
-        waltz_challenge: 'Baron_waltz_challenge',
-        done: 'Baron_success'
-    },
-    Uncle_Gesso: {
-        start: 'Gesso_greeting',
-        explain_nursery: 'Gesso_explain_nursery',
-        eye_search: 'Gesso_eye_search',
-        done: 'Gesso_farewell'
-    },
-    Curator_Vance: {
-        start: 'Vance_greeting',
-        explain_gallery: 'Vance_explain_gallery',
-        shadow_hint: 'Vance_shadow_hint',
-        done: 'Vance_shadow_returned'
-    },
-    Faceless_Queen: {
-        start: 'Queen_greeting',
-        done: 'Queen_dismissal'
-    },
-    Chirp: {
-        start: 'Chirp_greeting',
-        done: 'Chirp_farewell'
-    },
-    Keyhole_Specter: {
-        start: 'Specter_greeting',
-        done: 'Specter_farewell'
-    },
-    Spindle: {
-        start: 'Spindle_greeting',
-        puzzle: 'Spindle_thorn_challenge',
-        done: 'Spindle_farewell'
-    },
-    Lost_Scout: {
-        start: 'Scout_greeting',
-        done: 'Scout_farewell'
-    },
-    Keeper_of_the_Rust: {
-        start: 'Keeper_greeting',
-        explain: 'Keeper_explain_keys',
-        done: 'Keeper_farewell'
-    },
-    Lovelace_the_Fern: {
-        start: 'Lovelace_greeting',
-        done: 'Lovelace_farewell'
-    },
-    Epitaphist: {
-        start: 'Epitaphist_greeting',
-        riddle: 'Epitaphist_riddle',
-        done: 'Epitaphist_farewell'
-    },
-    Grand_Pendulum: {
-        start: 'Pendulum_greeting',
-        done: 'Pendulum_farewell'
-    }
-};
-
-const MERCY_VOICE_MAP = {
-    crow_sphere: 'Barnaby_mercy_sphere',
-    fern_wp: 'Lovelace_mercy',
-    epitaphist_curi: 'Epitaphist_mercy',
-    pendulum_wp: 'Pendulum_mercy',
-    waltz: 'Baron_mercy_waltz',
-    gesso_eye: 'Gesso_mercy_eye',
-    vance_shadow_wp: 'Vance_mercy_shadow',
-    vance_shadow_ch: 'Vance_mercy_shadow',
-    queen_charm: 'Queen_mercy_charm',
-    queen_wp: 'Queen_mercy_willpower',
-    chirp_wp: 'Chirp_mercy',
-    specter_curi: 'Specter_mercy',
-    spindle_wp: 'Spindle_mercy',
-    scout_curi: 'Scout_mercy',
-    rust_curi: 'Keeper_mercy'
-};
-
-const NARRATOR_VOICE_MAP = {
-    "Your Curiosity is too low to bear the compass.": "narr_compass_low",
-    "You spot the lever and pull it. A Vial of Lavender Ink drops onto the desk.": "narr_sphere_ink",
-    "The mechanism eludes you. Perhaps another glance.": "narr_sphere_fail",
-    "You received the Folded Compass. Your Curiosity dims slightly.": "narr_compass_receive",
-    "You waltz flawlessly. The Baron presents you with Helium Loafers.": "narr_waltz_success",
-    "You stumble onto a floating table. Perhaps another attempt?": "narr_waltz_fail",
-    "You find the eye marked with the letter \"I\". It glows warmly.": "narr_eye_found",
-    "The drawers all look the same. Perhaps come back with sharper eyes.": "narr_eye_fail",
-    "Your shadow obeys and snaps back to your feet.": "narr_shadow_command",
-    "You paint a lovely portrait; the frame accepts it and releases your shadow.": "narr_shadow_paint",
-    "Your painting is... unrecognisable. The frame rejects it.": "narr_shadow_paint_fail",
-    "Your shadow wavers but doesn't return.": "narr_shadow_command_fail",
-    "The Queen is delighted by your eloquence. She hands you the letter \"A\".": "narr_queen_charm",
-    "The Queen respects your resolve and grants you the letter \"A\".": "narr_queen_will",
-    "Your argument falls flat. The Queen sentences you to hard labor.": "narr_queen_charm_fail",
-    "Your submission only amuses her. Hard labor it is.": "narr_queen_will_fail",
-    "You glide through the aviary without a sound. Chirp offers you a glass feather.": "narr_chirp_success",
-    "A twig snaps underfoot. Glass shards rain down.": "narr_chirp_fail",
-    "You press your ear to the C-sharp keyhole. The Specter hands you a skeleton key.": "narr_specter_success",
-    "All keyholes sound the same. The Specter sighs and vanishes.": "narr_specter_fail",
-    "You brave the thorns and Spindle hands you a thistle key.": "narr_spindle_success",
-    "The thorns scratch you. Spindle chuckles.": "narr_spindle_fail",
-    "You find a dry match and hand it to the Scout. He gives you one in return.": "narr_scout_success",
-    "You come up empty. The Scout sighs.": "narr_scout_fail",
-    "You pull a key that glints faintly. It may open nothing, but it feels important.": "narr_keeper_success",
-    "The key crumbles in your hand.": "narr_keeper_fail",
-    "You pull the shard from the fern. It hums softly with the letter D.": "narr_fern_success",
-    "Thorns prick your skin. The plant giggles.": "narr_fern_fail",
-    "The gargoyle nods and hands you the Chisel of Renown.": "narr_epitaphist_success",
-    "The gargoyle cackles. \"Wrong! Come back when you have listened to your own feet.\"": "narr_epitaphist_fail",
-    "The pendulum swings aside, granting you passage.": "narr_pendulum_pass",
-    "The pendulum clips your shoulder.": "narr_pendulum_fail",
-
-    // Pickup voices
-    "You unfold the compass. It tugs toward a distant room.": "narr_pickup_compass",
-    "The ink shimmers; it might make doors more agreeable.": "narr_pickup_lavender_ink",
-    "You feel a surge of determination.": "narr_pickup_resolve",
-    "The loafers feel weightless. They might lift you over dangers.": "narr_pickup_loafers",
-    "You pocket the letter D.": "narr_pickup_shard_D",
-    "The eye gazes softly. You pocket the letter I.": "narr_pickup_shard_I",
-    "You take the shard. It hums with courtroom authority.": "narr_pickup_shard_A",
-    "You pocket the letter N.": "narr_pickup_shard_N",
-    "You pocket the second N.": "narr_pickup_shard_N2",
-    "You pocket the letter E.": "narr_pickup_shard_E",
-    "The feather chimes softly as you pocket it.": "narr_pickup_feather",
-    "You pocket the skeleton key. It feels important.": "narr_pickup_skeleton_key",
-    "You carefully pocket the thistle key.": "narr_pickup_thistle_key",
-    "You take the dry match. It might light something later.": "narr_pickup_dry_match",
-    "The chisel feels heavy with possibility.": "narr_pickup_chisel"
-};
-
-/* ------------------------------------------------------------------ */
-/*  HELPER: build path from room folder + filename                     */
-/* ------------------------------------------------------------------ */
-function buildRoomAudioPath(filename) {
-    const key = getCurrentRoom();
-    const roomFormatted = key.replace(',','-');
-    return `assets/audio/room_${roomFormatted}/${filename}.mp3`;
-}
-
-/* ------------------------------------------------------------------ */
-/*  VOICE PLAYBACK USING QUEUE                                         */
-/* ------------------------------------------------------------------ */
-function playDialogueVoice(npcId, nodeKey) {
-    const npcMap = DIALOGUE_VOICE_MAP[npcId];
-    if (!npcMap) return;
-    const filename = npcMap[nodeKey];
-    if (!filename) return;
-    enqueueAudio(buildRoomAudioPath(filename), true);
-}
-
-function playMercyVoice(questId) {
-    const filename = MERCY_VOICE_MAP[questId];
-    if (!filename) return Promise.resolve();
-    return enqueueAudio(buildRoomAudioPath(filename), true);
-}
-
-function playDoorVoice(lineText) {
-    const isLocked = LOCKED_LINES.includes(lineText);
-    const pool = isLocked ? LOCKED_LINES : UNLOCKED_LINES;
-    const idx = pool.indexOf(lineText) + 1;
-    if (idx < 1) return Promise.resolve();
-    const audioPath = `assets/audio/doors/door_${isLocked ? 'locked' : 'unlocked'}_${String(idx).padStart(2,'0')}.mp3`;
-    // Doors should not freeze the player (the door will open after speech via await)
-    return enqueueAudio(audioPath, false);
-}
-
-/* ------------------------------------------------------------------ */
-/*  UI FUNCTIONS                                                       */
-/* ------------------------------------------------------------------ */
+// ----- UI -----
 const pickupPrompt = document.getElementById('pickup-prompt');
 const pickupMsg = document.getElementById('pickup-msg');
 const talkPrompt = document.getElementById('talk-prompt');
@@ -290,11 +24,8 @@ function showPickupMsg(text) {
     pickupMsg.classList.add('show');
     setTimeout(() => pickupMsg.classList.remove('show'), 2500);
 
-    // Voice the line if mapped (don't freeze)
-    const filename = NARRATOR_VOICE_MAP[text];
-    if (filename) {
-        enqueueAudio(buildRoomAudioPath(filename), false);
-    }
+    // Dispatch pickup voice event (won't freeze player)
+    document.dispatchEvent(new CustomEvent('voice:play', { detail: { type: 'pickup', text } }));
 }
 
 function showMessage(text) {
@@ -303,10 +34,8 @@ function showMessage(text) {
     el.classList.add('show');
     setTimeout(() => el.classList.remove('show'), 3500);
 
-    const filename = NARRATOR_VOICE_MAP[text];
-    if (filename) {
-        enqueueAudio(buildRoomAudioPath(filename), true);
-    }
+    // Dispatch narrator message voice event (will freeze player)
+    document.dispatchEvent(new CustomEvent('voice:play', { detail: { type: 'message', text } }));
 }
 
 function showDoorMsg(text) {
@@ -317,6 +46,7 @@ function showDoorMsg(text) {
     el.classList.add('show');
     doorMsgActive = true;
     setTimeout(() => { el.classList.remove('show'); doorMsgActive = false; }, 3500);
+    // Voice dispatch is now handled by Door.interact() itself
 }
 
 function updateHUD() {
@@ -363,36 +93,43 @@ function updateMinimap() {
     }
 }
 
-/* ------------------------------------------------------------------ */
-/*  NARRATION (room ambient)                                           */
-/* ------------------------------------------------------------------ */
+// --- Narration (text only, voice dispatched from here) ---
 function startNarration(roomKeyHyphen) {
     if (narrationActive || flags.narratedRooms.has(roomKeyHyphen)) return;
     const text = ROOM_NARRATION_TEXT[roomKeyHyphen];
     if (!text) return;
-    const audioPath = `assets/audio/${roomKeyHyphen}.mp3`;
     flags.narratedRooms.add(roomKeyHyphen);
     narrationActive = true;
     playerFrozen = true;
     document.getElementById('narration-text').textContent = text;
     document.getElementById('narration-popup').style.display = 'block';
     document.getElementById('narrator-hud-btn').style.display = 'block';
-    narrationAudio = new Audio(audioPath);
-    narrationAudio.onended = () => stopNarration();
-    narrationAudio.play();
+
+    // Dispatch narration voice event – when it ends, stop narration
+    document.dispatchEvent(new CustomEvent('voice:play', {
+        detail: {
+            type: 'narration',
+            roomKey: roomKeyHyphen,
+            callback: () => {
+                narrationActive = false;
+                playerFrozen = false;
+                document.getElementById('narration-popup').style.display = 'none';
+                document.getElementById('narrator-hud-btn').style.display = 'none';
+            }
+        }
+    }));
 }
 
 function stopNarration() {
-    if (narrationAudio) { narrationAudio.pause(); narrationAudio = null; }
+    // Stop the voice if it's currently playing
+    document.dispatchEvent(new CustomEvent('voice:stop'));
     narrationActive = false;
     playerFrozen = false;
     document.getElementById('narration-popup').style.display = 'none';
     document.getElementById('narrator-hud-btn').style.display = 'none';
 }
 
-/* ------------------------------------------------------------------ */
-/*  DIALOGUE SYSTEM                                                    */
-/* ------------------------------------------------------------------ */
+// --- Dialogue (no voice) ---
 let dialogueNpcId = null;
 let dialogueNodeKey = null;
 
@@ -440,24 +177,26 @@ function showDialogueNode(npcId, nodeKey) {
         document.getElementById('dialogue-close').style.display = 'block';
     }
     if (node.onShow) node.onShow();
-    playDialogueVoice(npcId, nodeKey);
+
+    // Dispatch dialogue voice event
+    if (dialogueNpcId) {
+        document.dispatchEvent(new CustomEvent('voice:play', {
+            detail: { type: 'dialogue', npcId: dialogueNpcId, nodeKey: dialogueNodeKey }
+        }));
+    }
 }
 
 function closeDialogue() {
     document.getElementById('dialogue-box').classList.remove('active');
     dialogueNpcId = null;
     dialogueNodeKey = null;
-    // No need to manually stop audio; queue continues naturally.
-    // But we must unfreeze if dialogue was freezing (though the queue will do it when it ends)
     for (let w of wanderAnimations) {
         const npcId = npcMeshes.get(w.mesh);
         if (npcId && NPCS[npcId].wander) w.active = true;
     }
 }
 
-/* ------------------------------------------------------------------ */
-/*  INTERACTION                                                        */
-/* ------------------------------------------------------------------ */
+// --- Interaction ---
 let focusedItem = null;
 let focusedNpc = null;
 
@@ -540,7 +279,7 @@ function interact() {
     }
 }
 
-// Waltz helper
+// --- Waltz helper ---
 function attemptWaltzWithMercy(useVial) {
     const bonus = useVial && inventory.includes('vial_of_resolve') ? 2 : 0;
     if (bonus) { inventory = inventory.filter(id => id !== 'vial_of_resolve'); updateHUD(); }
@@ -559,15 +298,29 @@ function attemptWaltzWithMercy(useVial) {
     });
 }
 
-// Patch mercyRoll to play mercy voice BEFORE the reward action
-const originalMercyRoll = mercyRoll;
+// MercyRoll (mercy voice event dispatched via voice module)
 window.mercyRoll = async function(questId, rollPromise, pityMessage, pityAction) {
-    const res = await originalMercyRoll(questId, rollPromise, pityMessage, pityAction);
-    if (res.mercy) {
-        // Play mercy voice, then do the pity action (which may trigger showMessage)
-        await playMercyVoice(questId);
-        await pityAction();
-        return { success: true, mercy: true };
+    const res = await rollPromise;
+    if (!res.success) {
+        mercyTracker[questId] = (mercyTracker[questId] || 0) + 1;
+        if (mercyTracker[questId] >= 2) {
+            mercyTracker[questId] = 0;
+            // Play mercy voice first
+            document.dispatchEvent(new CustomEvent('voice:play', {
+                detail: {
+                    type: 'mercy',
+                    questId,
+                    callback: () => {
+                        // After mercy voice, show narrator message (which plays its own voice)
+                        showMessage(pityMessage);
+                        pityAction();
+                    }
+                }
+            }));
+            return { success: true, mercy: true };
+        }
+    } else {
+        mercyTracker[questId] = 0;
     }
     return res;
 };

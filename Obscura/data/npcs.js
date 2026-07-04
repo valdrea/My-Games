@@ -342,6 +342,6 @@ const NPCS = {
             },
             done: { text: '"Tick… tock… you may pass again, but time is not your friend."', choices: [{ label: "Goodbye.", next: null }] }
         },
-        getStartNode() { return false ? 'done' : 'start'; }  // always available
+        getStartNode() { return false ? 'done' : 'start'; }
     }
 };

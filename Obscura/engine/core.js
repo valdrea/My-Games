@@ -38,7 +38,6 @@ function animate() {
         const right = new THREE.Vector3().crossVectors(forward, camera.up).normalize();
         const move = new THREE.Vector3();
 
-        // Movement disabled while frozen
         if (!narrationActive && !playerFrozen) {
             if (keys['w']) move.add(forward);
             if (keys['s']) move.sub(forward);
@@ -104,7 +103,6 @@ window.addEventListener('resize', () => {
     renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
-// Initialization
 initDieCanvas();
 setupControls();
 preloadAllAssets().then(() => {

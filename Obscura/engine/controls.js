@@ -16,11 +16,8 @@ function setupControls() {
                 stopNarration();
                 return;
             }
-            if (currentAudio) {
-                e.preventDefault();
-                skipCurrentAudio();
-                return;
-            }
+            // Skip current voice if playing (but not narration, handled above)
+            document.dispatchEvent(new CustomEvent('voice:stop'));
             const closeBtn = document.getElementById('dialogue-close');
             if (closeBtn && closeBtn.style.display !== 'none' && document.getElementById('dialogue-box').classList.contains('active')) {
                 e.preventDefault();
@@ -92,15 +89,23 @@ function pushPlayerOutOfNPCs() {
 }
 
 function checkCollision(pos) {
+    const playerBottom = 0;
+    const playerTop = 1.7;
     for (let c of colliders) {
         if (c.type === 'cylinder') {
             const dx = pos.x - c.pos.x;
             const dz = pos.z - c.pos.z;
             const dist = Math.sqrt(dx * dx + dz * dz);
-            if (dist < c.radius + PLAYER_RADIUS && Math.abs(pos.y - c.pos.y) < c.height / 2 + 0.5) return true;
+            const colBottom = c.pos.y - c.height / 2;
+            const colTop = c.pos.y + c.height / 2;
+            if (dist < c.radius + PLAYER_RADIUS && playerTop > colBottom && playerBottom < colTop) {
+                return true;
+            }
         } else {
             const dx = Math.abs(pos.x - c.pos.x), dz = Math.abs(pos.z - c.pos.z), dy = Math.abs(pos.y - c.pos.y);
-            if (dx < c.size.x + PLAYER_RADIUS && dz < c.size.z + PLAYER_RADIUS && dy < c.size.y + 0.5) return true;
+            if (dx < c.size.x + PLAYER_RADIUS && dz < c.size.z + PLAYER_RADIUS && dy < c.size.y + 0.5) {
+                return true;
+            }
         }
     }
     return false;

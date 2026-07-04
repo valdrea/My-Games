@@ -4,7 +4,7 @@
 
 const ROOM_SIZE     = 20;
 const WALL_HEIGHT   = 8;
-const MOVE_SPEED    = 6;   // slower, lengthens time in each room
+const MOVE_SPEED    = 6;
 const PLAYER_RADIUS = 0.5;
 const DOOR_W        = 2.8;
 const DOOR_H        = 3.8;
@@ -84,13 +84,11 @@ let greenDoorTex = null, blackDoorTex = null;
 // Player control
 let gameRunning = false;
 let isLocked = false;
-let playerFrozen = false;          // true while audio plays
+let playerFrozen = false;
 let yaw = 0, pitch = 0, targetYaw = 0, targetPitch = 0;
 const keys = {};
 
-// Narration & dialogue audio
-let narrationAudio = null;
-let currentDialogueAudio = null;   // current NPC dialogue voice
+// Narration & dialogue (text only – no audio)
 let narrationActive = false;
 let doorMsgActive = false;
 let pendingNarration = null;
@@ -100,7 +98,7 @@ let currentOpenDoor = null;
 let snowParticles = [];
 let snowTexture = null;
 
-// Preload lists
+// Preload lists (unchanged)
 const ALL_TEXTURE_PATHS = [
     'assets/floor.png', 'assets/ceiling.png',
     'assets/Folded_Compass.png', 'assets/Lavender_Ink.png', 'assets/resolve.png', 'assets/Helium_Loafers.png',

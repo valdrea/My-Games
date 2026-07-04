@@ -183,8 +183,8 @@ async function spawnTemporaryItem(itemId, pos) {
     const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, side: THREE.DoubleSide, depthWrite: false });
     const mesh = new THREE.Mesh(geo, mat);
     const rc = getRoomCoords(getCurrentRoom());
-    const offsetX = (Math.random() - 0.5) * 6.0;
-    const offsetZ = (Math.random() - 0.5) * 6.0;
+    const offsetX = (Math.random() - 0.5) * 14.0;
+    const offsetZ = (Math.random() - 0.5) * 14.0;
     mesh.position.set(
         rc.rx * ROOM_SIZE + ROOM_SIZE / 2 + (pos.x || 0) + offsetX,
         pos.y || 1.5,

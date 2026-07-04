@@ -27,15 +27,8 @@ class Door {
         else this.setLocked();
     }
 
-    setLocked() {
-        this.unlocked = false;
-        this.mesh.material.map = blackDoorTex;
-    }
-
-    setUnlocked() {
-        this.unlocked = true;
-        this.mesh.material.map = greenDoorTex;
-    }
+    setLocked() { this.unlocked = false; this.mesh.material.map = blackDoorTex; }
+    setUnlocked() { this.unlocked = true; this.mesh.material.map = greenDoorTex; }
 
     close() {
         if (!this.isOpen || this.isAnimating) return;
@@ -44,7 +37,8 @@ class Door {
         this.state = 'closing';
     }
 
-    async interact() {
+    // Play door voice and then open (or just open if no voice)
+    interact() {
         if (this.isOpen || this.isAnimating) return;
         for (let other of doorList) {
             if (other !== this && other.isOpen) other.close();
@@ -52,35 +46,52 @@ class Door {
         if (!this.unlocked) {
             if (this.unlockCondition && this.unlockCondition()) {
                 this.setUnlocked();
-                showDoorMsg("The way is clear.");
-                await playDoorVoice("The way is clear.");   // this line is custom, not in pool, but we'll skip voice
-                this.open();
+                const line = "The way is clear.";
+                showDoorMsg(line);
+                this.playDoorVoiceThenOpen(line);
                 return;
             }
             if (this.rollCheck) {
-                performResonanceRoll(this.rollCheck.stat, this.rollCheck.dc).then(async res => {
+                performResonanceRoll(this.rollCheck.stat, this.rollCheck.dc).then(res => {
                     if (res.success) {
-                        showDoorMsg("The door hums with approval.");
-                        await playDoorVoice("The door hums with approval."); // custom
+                        const line = "The door hums with approval.";
+                        showDoorMsg(line);
                         this.setUnlocked();
-                        this.open();
+                        this.playDoorVoiceThenOpen(line);
                     } else {
                         const line = pickLine(LOCKED_LINES);
                         showDoorMsg(line);
-                        await playDoorVoice(line);
+                        // For locked lines, just speak (no opening)
+                        document.dispatchEvent(new CustomEvent('voice:play', {
+                            detail: { type: 'door', text: line }
+                        }));
                     }
                 });
                 return;
             }
             const line = pickLine(LOCKED_LINES);
             showDoorMsg(line);
-            await playDoorVoice(line);
+            document.dispatchEvent(new CustomEvent('voice:play', {
+                detail: { type: 'door', text: line }
+            }));
             return;
         }
         const line = pickLine(UNLOCKED_LINES);
         showDoorMsg(line);
-        await playDoorVoice(line);
-        this.open();
+        this.playDoorVoiceThenOpen(line);
+    }
+
+    playDoorVoiceThenOpen(line) {
+        // Dispatch voice event with a callback that opens the door after the voice ends
+        document.dispatchEvent(new CustomEvent('voice:play', {
+            detail: {
+                type: 'door',
+                text: line,
+                callback: () => {
+                    this.open();
+                }
+            }
+        }));
     }
 
     open() {
@@ -102,12 +113,8 @@ class Door {
         if (this.progress >= 1) {
             this.progress = 1;
             this.isAnimating = false;
-            if (this.state === 'opening') {
-                this.isOpen = true;
-            } else {
-                this.isOpen = false;
-                currentOpenDoor = null;
-            }
+            if (this.state === 'opening') { this.isOpen = true; }
+            else { this.isOpen = false; currentOpenDoor = null; }
         }
         const t = this.progress * this.progress * (3 - 2 * this.progress);
         if (this.state === 'opening') {
@@ -121,7 +128,4 @@ class Door {
 }
 
 const unlockedDoors = new Set();
-function unlockDoor(doorId) {
-    unlockedDoors.add(doorId);
-    for (let d of doorList) if (d.doorId === doorId) d.setUnlocked();
-}
+function unlockDoor(doorId) { unlockedDoors.add(doorId); for (let d of doorList) if (d.doorId === doorId) d.setUnlocked(); }
