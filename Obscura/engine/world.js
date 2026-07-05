@@ -2,7 +2,6 @@
 // THE PAVILION OF FALSE HORIZONS – WORLD BUILDER
 // =============================================================
 
-// Self‑contained helper – does not depend on controls.js
 function getRoomCoordsLocal(roomKey) {
     const p = roomKey.split(',');
     return { rx: parseInt(p[0]) - 1, rz: parseInt(p[1]) - 1 };
@@ -32,9 +31,9 @@ async function buildWorld(){
     window.snowParticles = [];
     pendulumObjects.length = 0;
     cuckoos.length = 0;
-    window.stars = [];          // floating stars in observatory
-    window.spotlight = null;    // moving spotlight in theater
-    window.theaterCX = 0;       // used by spotlight animation
+    window.stars = [];
+    window.spotlight = null;
+    window.theaterCX = 0;
     window.theaterCZ = 0;
 
     greenDoorTex = textureCache['assets/green_door.png'] || await loadTexture('assets/green_door.png');
@@ -69,10 +68,7 @@ async function buildWorld(){
         ].forEach(p=>addCollider(p[0],p[1],p[2],p[3],p[4],p[5]));
     }
 
-    // 2. STATIC PROPS (unchanged sections omitted for brevity – included in full file)
-    // (The study, ballroom, gallery, nursery, court, aviary, hedge maze, graveyard, wardrobe,
-    //  cuckoo birds, doll trashpile billboard, stone tablet, hungry plants, and doors remain
-    //  exactly as they were in the last known good world.js. I'll re‑insert them completely.)
+    // 2. STATIC PROPS
 
     // Study (3,3)
     const studyCX = 2*ROOM_SIZE+ROOM_SIZE/2, studyCZ = 2*ROOM_SIZE+ROOM_SIZE/2;
@@ -97,7 +93,7 @@ async function buildWorld(){
     scene.add(fire); worldObjects.push(fire);
     addCylinderCollider(studyCX - ROOM_SIZE/2 + 4, 1.5, studyCZ - ROOM_SIZE/2 + 4, 1.5, 3);
 
-    // Ballroom (2,3) – floating props, no collision
+    // Ballroom (2,3)
     const ballCX = 1*ROOM_SIZE+ROOM_SIZE/2, ballCZ = 2*ROOM_SIZE+ROOM_SIZE/2;
     for (let i=0;i<2;i++) {
         const chanTex = await loadSpriteTexture('assets/chandelier.png','Chandelier','#ffd700');
@@ -159,7 +155,7 @@ async function buildWorld(){
         addCollider(pos[0], 1.0, pos[2]+0.3, 3, 2, 0.3);
     }
 
-    // Doll trashpile as billboard sprite
+    // Doll trashpile billboard
     const trashTex = await loadSpriteTexture('assets/doll_trashpile.png', 'Trashpile', '#ffd700');
     const trashSprite = new THREE.Mesh(new THREE.PlaneGeometry(3, 3), new THREE.MeshBasicMaterial({ map: trashTex, transparent: true, side: THREE.DoubleSide, depthWrite: false }));
     trashSprite.position.set(nurseryCX-7, 1.5, nurseryCZ-7);
@@ -167,7 +163,7 @@ async function buildWorld(){
     scene.add(trashSprite); worldObjects.push(trashSprite);
     billboards.push(trashSprite);
 
-    // Court (4,3) – Queen’s bench
+    // Court (4,3)
     const courtCX = 3*ROOM_SIZE+ROOM_SIZE/2, courtCZ = 2*ROOM_SIZE+ROOM_SIZE/2;
     const bench = await loadModelOrFallback('assets/marble_bench.glb', async () => {
         return await createStaticPlane('assets/marble_bench.png', 3, 2, { x: courtCX, y: 0, z: courtCZ + 2 }, 0);
@@ -334,7 +330,7 @@ async function buildWorld(){
         });
     }
 
-    // 3. NPCS (using local getRoomCoords)
+    // 3. NPCS
     const npcEntries = Object.values(NPCS);
     for (let i = 0; i < npcEntries.length; i++) {
         const npcData = npcEntries[i];
@@ -461,7 +457,7 @@ async function buildWorld(){
 
     // Star chart on north wall (static, not billboarded)
     const starChartTex = await loadTexture('assets/star_chart.png');
-	const starChart = new THREE.Mesh(new THREE.PlaneGeometry(4, 3), new THREE.MeshBasicMaterial({ map: starChartTex, transparent: true, side: THREE.DoubleSide }));
+    const starChart = new THREE.Mesh(new THREE.PlaneGeometry(4, 3), new THREE.MeshBasicMaterial({ map: starChartTex, transparent: true, side: THREE.DoubleSide }));
     starChart.position.set(obsCX + 5, 3.0, obsCZ - ROOM_SIZE/2 + 0.1);
     starChart.rotation.set(0, 0, 0);
     scene.add(starChart); worldObjects.push(starChart);
@@ -494,7 +490,7 @@ async function buildWorld(){
     scene.add(curtain); worldObjects.push(curtain);
     // No billboard, no collider
 
-    // Spotlight bigger, on ground, moves around
+    // Spotlight bigger, on ground, moves around (COMMENTED OUT per your edit)
     //const spotlightTex = await loadSpriteTexture('assets/spotlight.png', 'Spotlight', '#ffd700');
     //const spotlight = new THREE.Mesh(new THREE.PlaneGeometry(6, 6), new THREE.MeshBasicMaterial({ map: spotlightTex, transparent: true, side: THREE.DoubleSide, depthWrite: false }));
     //spotlight.position.set(theaterCX, 2.5, theaterCZ);
@@ -502,8 +498,6 @@ async function buildWorld(){
     //scene.add(spotlight); worldObjects.push(spotlight);
     //billboards.push(spotlight);
     //window.spotlight = { mesh: spotlight, angle: 0, radius: 5, speed: 0.3 };
-
-    // Second wraith is already handled by NPC loop (Stage_Wraith2)
 
     // Doors
     const doorGeo = new THREE.PlaneGeometry(DOOR_W, DOOR_H);

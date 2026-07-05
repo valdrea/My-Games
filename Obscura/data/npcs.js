@@ -344,7 +344,7 @@ const NPCS = {
         getStartNode() { return false ? 'done' : 'start'; }
     },
 
-    // ---- NEW NPCs (three rooms) ----
+    // ---- NEW NPCs (previous three rooms) ----
     Ladder_Keeper: {
         id: 'Ladder_Keeper', name: 'The Ladder-Keeper', roomKey: '3,5',
         texture: 'assets/Ladder_Keeper.png', position: { x: 0, y: 0.0, z: 0 }, scale: 3.0,
@@ -426,7 +426,7 @@ const NPCS = {
         glb: 'assets/Stage_Wraith.glb', glbScale: 10.0, glbRotation: Math.PI/2,
         materialConfig: { roughness: 0.8, metalness: 0.1, emissiveIntensity: 0.15 },
         faction: 'Custodian',
-		floatBounce: { amplitude: 0.15, speed: 1.5 },
+        floatBounce: { amplitude: 0.15, speed: 1.5 },
         dialogue: {
             start: {
                 text: '"I have forgotten my last line. The play cannot end until it is spoken. Will you give me a line?"',
@@ -457,14 +457,124 @@ const NPCS = {
         getStartNode() { return flags.foundShardE ? 'done' : 'start'; }
     },
 
-    // Second wraith (no dialogue, just hopping, slightly different phase)
     Stage_Wraith2: {
         id: 'Stage_Wraith2', name: 'The Second Stage-Wraith', roomKey: '5,4',
         texture: 'assets/Stage_Wraith2.png', position: { x: 2, y: 2.2, z: -2 }, scale: 2.2,
         glb: 'assets/Stage_Wraith2.glb', glbScale: 11.0, glbRotation: -Math.PI/2,
         materialConfig: { roughness: 1.8, metalness: 0.0, emissiveIntensity: 0.15 },
         faction: 'Custodian',
-        floatBounce: { amplitude: 0.30, speed: 2.5 },   // different amplitude/speed for out-of-sync hop
+        floatBounce: { amplitude: 0.30, speed: 2.5 },
         dialogue: {}
+    },
+
+    // ---- BRAND NEW NPCs (1,1 / 2,1 / 5,2) ----
+    Mirror_Witch: {
+        id: 'Mirror_Witch', name: 'The Mirror-Witch', roomKey: '1,1',
+        texture: 'assets/Mirror_Witch.png', position: { x: 0, y: 1.5, z: -3 }, scale: 3.0,
+        glb: 'assets/Mirror_Witch.glb', glbScale: 3.0, glbRotation: Math.PI,
+        materialConfig: { roughness: 1.2, metalness: -1.0, emissiveIntensity: 0.05 },
+        faction: 'Custodian',
+        dialogue: {
+            start: {
+                text: '"You are broken like me… let me see myself in your eyes. Stand still and let me piece you together."',
+                choices: [
+                    { label: "Hold still (Willpower DC 8)", next: 'puzzle' }
+                ]
+            },
+            puzzle: {
+                text: "Hold still. The glass remembers every tremor. (Willpower DC 8)",
+                choices: [
+                    { label: "Stay perfectly still.", next: async () => {
+                        if (flags.mirrorGiven) { closeDialogue(); showMessage('You already have the mirror.'); return; }
+                        const res = await mercyRoll('mirror_witch_wp', performResonanceRoll('willpower', 8),
+                            '"You try so hard to be still… here, take the mirror. Perhaps you can learn to stop running."',
+                            async () => { spawnTemporaryItem('silver_hand_mirror', { x: 0, y: 1.5, z: 1 }); flags.mirrorGiven = true; updateHUD(); });
+                        if (res.success) {
+                            if (!res.mercy) { showMessage('She presses a tiny silver mirror into your palm. "Take this – it will show you what is hidden."'); spawnTemporaryItem('silver_hand_mirror', { x: 0, y: 1.5, z: 1 }); flags.mirrorGiven = true; updateHUD(); }
+                            closeDialogue();
+                        } else {
+                            showMessage('A shard nicks your cheek. The witch sighs.'); stats.willpower = Math.max(0, stats.willpower - 1); updateHUD(); closeDialogue();
+                        }
+                    }},
+                    { label: "Step back.", next: null }
+                ]
+            },
+            done: { text: '"Go, unbroken one. My reflection will find its way back."', choices: [{ label: "Goodbye.", next: null }] }
+        },
+        getStartNode() { return flags.mirrorGiven ? 'done' : 'start'; }
+    },
+
+    Widow_Weaver: {
+        id: 'Widow_Weaver', name: 'The Widow-Weaver', roomKey: '2,1',
+        texture: 'assets/Widow_Weaver.png', position: { x: 0, y: 0.2, z: 0 }, scale: 2.5,
+        glb: 'assets/Widow_Weaver.glb', glbScale: 2.0, glbRotation: Math.PI/2,
+        materialConfig: { roughness: 1.0, metalness: 0.0, emissiveIntensity: 0.05 },
+        faction: 'MischiefMaker',
+        wander: { speed: 0.3, radius: 2, interval: 3 },
+        dialogue: {
+            start: {
+                text: '"The threads have eaten a little wooden soldier… can you pull him free without breaking the lace?"',
+                choices: [
+                    { label: "Untangle the knot (Curiosity DC 8)", next: 'puzzle' }
+                ]
+            },
+            puzzle: {
+                text: "Careful… each strand is a memory. (Curiosity DC 8)",
+                choices: [
+                    { label: "Gently unpick the threads.", next: async () => {
+                        if (flags.threadGiven) { closeDialogue(); showMessage('You already have the thread.'); return; }
+                        const res = await mercyRoll('widow_weaver_curi', performResonanceRoll('curiosity', 8),
+                            '"You have patience. The thread is yours – perhaps it will mend something more important."',
+                            async () => { spawnTemporaryItem('red_thread', { x: 0, y: 1.5, z: 1 }); flags.threadGiven = true; updateHUD(); });
+                        if (res.success) {
+                            if (!res.mercy) { showMessage('The knot unravels and a spool of crimson thread rolls into your hand.'); spawnTemporaryItem('red_thread', { x: 0, y: 1.5, z: 1 }); flags.threadGiven = true; updateHUD(); }
+                            closeDialogue();
+                        } else {
+                            showMessage('The lace tightens around your fingers. The weaver clicks her tongue.'); stats.willpower = Math.max(0, stats.willpower - 1); updateHUD(); closeDialogue();
+                        }
+                    }},
+                    { label: "Maybe later.", next: null }
+                ]
+            },
+            done: { text: '"Come back if you wish to weave something beautiful."', choices: [{ label: "Goodbye.", next: null }] }
+        },
+        getStartNode() { return flags.threadGiven ? 'done' : 'start'; }
+    },
+
+    Cat_Lord: {
+        id: 'Cat_Lord', name: 'The Cat Lord', roomKey: '5,2',
+        texture: 'assets/Cat_Lord.png', position: { x: 0, y: 0.2, z: 2 }, scale: 4.0,
+        glb: 'assets/Cat_Lord.glb', glbScale: 5.0, glbRotation: -Math.PI/4,
+        materialConfig: { roughness: 2.0, metalness: 0.0, emissiveIntensity: 0.0 },
+        faction: 'MischiefMaker',
+        wander: { speed: 0.2, radius: 1, interval: 4 },
+        dialogue: {
+            start: {
+                text: '"Mmmm… you smell of outside. I don’t do favours for strangers. Tell me I’m magnificent, and perhaps I’ll let you pet my whisker."',
+                choices: [
+                    { label: "Flatter him (Charm DC 8)", next: 'charm' }
+                ]
+            },
+            charm: {
+                text: "Go on, flatter me. (Charm DC 8)",
+                choices: [
+                    { label: "Compliment his fur.", next: async () => {
+                        if (flags.whiskerGiven) { closeDialogue(); showMessage('You already have the whisker.'); return; }
+                        const res = await mercyRoll('cat_lord_charm', performResonanceRoll('charm', 8),
+                            '"Oh, very well. Your mewling is pathetic. Take the whisker and go."',
+                            async () => { spawnTemporaryItem('cat_whisker', { x: 0, y: 1.5, z: 1 }); flags.whiskerGiven = true; updateHUD(); });
+                        if (res.success) {
+                            if (!res.mercy) { showMessage('The cat lord yawns and flicks a loose whisker towards you.'); spawnTemporaryItem('cat_whisker', { x: 0, y: 1.5, z: 1 }); flags.whiskerGiven = true; updateHUD(); }
+                            closeDialogue();
+                        } else {
+                            showMessage('He turns his back and ignores you.'); stats.charm = Math.max(0, stats.charm - 1); updateHUD(); closeDialogue();
+                        }
+                    }},
+                    { label: "Never mind.", next: null }
+                ]
+            },
+            done: { text: '"Now leave. I have a nap to attend to."', choices: [{ label: "Goodbye.", next: null }] }
+        },
+        getStartNode() { return flags.whiskerGiven ? 'done' : 'start'; }
     }
 };

@@ -1,0 +1,237 @@
+{
+  "child": {
+    "voice": "en-US-AnaNeural",
+    "rate": 0.0,
+    "pitch": 0.0,
+    "effect": "None"
+  },
+  "Narr": {
+    "voice": "en-GB-SoniaNeural",
+    "rate": -10.526315789473685,
+    "pitch": -10.526315789473685,
+    "effect": "None"
+  },
+  "clay golum": {
+    "voice": "en-US-BrianNeural",
+    "rate": -9.597523219814242,
+    "pitch": -50.0,
+    "effect": "None"
+  },
+  "girl": {
+    "voice": "en-GB-MaisieNeural",
+    "rate": -9.597523219814242,
+    "pitch": 9.752321981424153,
+    "effect": "None"
+  },
+  "Barnaby": {
+    "voice": "en-GB-RyanNeural",
+    "rate": -29.885057471264368,
+    "pitch": -29.454022988505745,
+    "effects": [
+      "Crow"
+    ],
+    "master_volume": 6.03448275862069
+  },
+  "Baron": {
+    "voice": "en-GB-RyanNeural",
+    "rate": -9.913793103448278,
+    "pitch": 19.97126436781609,
+    "effects": [
+      "Telephone"
+    ],
+    "master_volume": 0.0
+  },
+  "Gesso": {
+    "voice": "en-US-GuyNeural",
+    "rate": 9.626436781609193,
+    "pitch": -10.05747126436782,
+    "effects": [
+      "Monster",
+      "Flutter"
+    ],
+    "master_volume": 5.0
+  },
+  "Vance": {
+    "voice": "en-GB-RyanNeural",
+    "rate": -10.201149425287355,
+    "pitch": -10.344827586206897,
+    "effects": [
+      "Robot",
+      "TinCan"
+    ],
+    "master_volume": 2.9885057471264354
+  },
+  "Queen": {
+    "voice": "en-GB-LibbyNeural",
+    "rate": -5.316091954022987,
+    "pitch": -20.11494252873563,
+    "effects": [
+      "Flutter"
+    ],
+    "master_volume": 1.0344827586206904
+  },
+  "Chirp": {
+    "voice": "en-US-MichelleNeural",
+    "rate": -10.05747126436782,
+    "pitch": -10.201149425287355,
+    "effects": [
+      "Crow",
+      "Telephone"
+    ],
+    "master_volume": 5.0
+  },
+  "Specter": {
+    "voice": "en-CA-ClaraNeural",
+    "rate": -20.05747126436782,
+    "pitch": 20.258620689655174,
+    "effects": [
+      "Crystal"
+    ],
+    "master_volume": 5.0
+  },
+  "Spindle": {
+    "voice": "en-GB-RyanNeural",
+    "rate": -5.316091954022987,
+    "pitch": 29.97126436781609,
+    "effects": [
+      "Robot"
+    ],
+    "master_volume": 0.0
+  },
+  "Scout": {
+    "voice": "en-AU-WilliamMultilingualNeural",
+    "rate": -5.316091954022987,
+    "pitch": -10.05747126436782,
+    "effects": [
+      "TinCan"
+    ],
+    "master_volume": 4.022988505747126
+  },
+  "Keeper": {
+    "voice": "en-CA-LiamNeural",
+    "rate": -15.086206896551722,
+    "pitch": -30.45977011494253,
+    "effects": [
+      "Distortion"
+    ],
+    "master_volume": 2.4712643678160937
+  },
+  "Lovelace": {
+    "voice": "en-IE-EmilyNeural",
+    "rate": -9.626436781609193,
+    "pitch": -30.17241379310345,
+    "effects": [
+      "Flutter"
+    ],
+    "master_volume": 2.4712643678160937
+  },
+  "Epitaphist": {
+    "voice": "en-GB-RyanNeural",
+    "rate": -14.511494252873561,
+    "pitch": -22.701149425287355,
+    "effects": [
+      "TinCan",
+      "Robot",
+      "Flutter"
+    ],
+    "master_volume": 3.9655172413793096
+  },
+  "Pendulum": {
+    "voice": "en-IE-ConnorNeural",
+    "rate": -29.74137931034483,
+    "pitch": -22.701149425287355,
+    "effects": [
+      "TinCan",
+      "Flutter",
+      "Crow",
+      "Distortion"
+    ],
+    "master_volume": 3.9655172413793096
+  },
+  "black door": {
+    "voice": "en-HK-SamNeural",
+    "rate": 39.942528735632195,
+    "pitch": -9.913793103448278,
+    "effects": [
+      "Monster",
+      "Flutter"
+    ],
+    "master_volume": 3.9655172413793096
+  },
+  "green door": {
+    "voice": "en-IE-EmilyNeural",
+    "rate": 10.344827586206897,
+    "pitch": -31.896551724137932,
+    "effects": [
+      "Crystal",
+      "Robot"
+    ],
+    "master_volume": 3.9655172413793096
+  },
+  "Moth": {
+    "voice": "en-IE-EmilyNeural",
+    "rate": -29.885057471264368,
+    "pitch": -19.971264367816094,
+    "effects": [
+      "Chipmunk",
+      "Flutter"
+    ],
+    "master_volume": 3.9655172413793096
+  },
+  "Dust": {
+    "voice": "en-US-AndrewNeural",
+    "rate": -50.0,
+    "pitch": -19.971264367816094,
+    "effects": [
+      "Flutter",
+      "Robot",
+      "Crystal",
+      "Chipmunk"
+    ],
+    "master_volume": 3.9655172413793096
+  },
+  "Wraith": {
+    "voice": "en-GB-ThomasNeural",
+    "rate": -14.655172413793103,
+    "pitch": -19.971264367816094,
+    "effects": [
+      "Flutter",
+      "Crystal",
+      "Echo"
+    ],
+    "master_volume": 3.9655172413793096
+  },
+  "MirrorWitch": {
+    "voice": "en-IE-EmilyNeural",
+    "rate": 0.0,
+    "pitch": 0.2873563218390842,
+    "effects": [
+      "Crystal",
+      "Underwater",
+      "Distortion",
+      "Flutter"
+    ],
+    "master_volume": 18.0
+  },
+  "WidowWeaver": {
+    "voice": "en-IE-EmilyNeural",
+    "rate": -24.856321839080458,
+    "pitch": -40.37356321839081,
+    "effects": [
+      "Crow",
+      "Flutter"
+    ],
+    "master_volume": 4.022988505747126
+  },
+  "CatLord": {
+    "voice": "en-GB-RyanNeural",
+    "rate": -10.344827586206897,
+    "pitch": -35.05747126436781,
+    "effects": [
+      "Crystal",
+      "TinCan",
+      "TinCan"
+    ],
+    "master_volume": 5.0
+  }
+}

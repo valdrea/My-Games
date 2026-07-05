@@ -84,7 +84,7 @@ let greenDoorTex = null, blackDoorTex = null;
 // Player control
 let gameRunning = false;
 let isLocked = false;
-let playerFrozen = false;          // true while audio plays
+let playerFrozen = false;
 let yaw = 0, pitch = 0, targetYaw = 0, targetPitch = 0;
 const keys = {};
 
@@ -126,14 +126,19 @@ const ALL_TEXTURE_PATHS = [
     'assets/hungry_tree.png', 'assets/hungry_lilly.png', 'assets/hungry_rose.png', 'assets/hungry_sunflower.png',
     'assets/stonetablet.png',
 
-    // ---- NEW rooms 3-5, 4-5, 5-4 ----
+    // ---- Rooms 3-5, 4-5, 5-4 ----
     'assets/3-5_floor.png', 'assets/4-5_floor.png', 'assets/5-4_floor.png',
     'assets/Ladder_Keeper.png', 'assets/Dust_Archivist.png', 'assets/Stage_Wraith.png', 'assets/Stage_Wraith2.png',
     'assets/telescope.png', 'assets/star_chart.png',
     'assets/trunk.png', 'assets/book_pile.png', 'assets/lantern.png',
     'assets/curtain.png', 'assets/spotlight.png', 'assets/mask.png',
     'assets/white_star.png', 'assets/yellow_star.png', 'assets/pride_star.png',
-    'assets/doll_trashpile.png',   // already present but ensuring
+    'assets/doll_trashpile.png',
+
+    // ---- NEW rooms 1-1, 2-1, 5-2 ----
+    'assets/1-1_floor.png', 'assets/2-1_floor.png', 'assets/5-2_floor.png',
+    'assets/Mirror_Witch.png', 'assets/Widow_Weaver.png', 'assets/Cat_Lord.png',
+    'assets/silver_hand_mirror.png', 'assets/red_thread.png', 'assets/cat_whisker.png',
 ];
 for (let i=1; i<=25; i++) ALL_TEXTURE_PATHS.push(`assets/wall_${i}.png`);
 
@@ -147,9 +152,10 @@ const ALL_GLB_PATHS = [
     'assets/marble_bench.glb', 'assets/Spindle.glb', 'assets/Keeper_of_the_Rust.glb',
     'assets/hedgeblock.glb', 'assets/snowpile.glb', 'assets/Lost_Scout.glb',
     'assets/stonetablet.glb',
-    // New NPC GLBs
+    // New NPC GLBs (3-5, 4-5, 5-4)
     'assets/Ladder_Keeper.glb', 'assets/Dust_Archivist.glb',
     'assets/Stage_Wraith.glb', 'assets/Stage_Wraith2.glb',
-    // Barnaby_the_Fern already present, but note it's used by Lovelace
     'assets/Barnaby_the_Fern.glb',
+    // NEW NPC GLBs (1-1, 2-1, 5-2)
+    'assets/Mirror_Witch.glb', 'assets/Widow_Weaver.glb', 'assets/Cat_Lord.glb',
 ];

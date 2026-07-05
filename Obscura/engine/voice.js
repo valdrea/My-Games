@@ -169,6 +169,22 @@ const DIALOGUE_VOICE_MAP = {
         start: 'StageWraith_greeting',
         will: 'StageWraith_will',
         done: 'StageWraith_farewell'
+    },
+    // ---- NEW NPCs (1,1 / 2,1 / 5,2) ----
+    Mirror_Witch: {
+        start: 'MirrorWitch_greeting',
+        puzzle: 'MirrorWitch_puzzle',
+        done: 'MirrorWitch_farewell'
+    },
+    Widow_Weaver: {
+        start: 'WidowWeaver_greeting',
+        puzzle: 'WidowWeaver_puzzle',
+        done: 'WidowWeaver_farewell'
+    },
+    Cat_Lord: {
+        start: 'CatLord_greeting',
+        charm: 'CatLord_charm',
+        done: 'CatLord_farewell'
     }
 };
 
@@ -190,7 +206,11 @@ const MERCY_VOICE_MAP = {
     rust_curi: 'Keeper_mercy',
     ladder_keeper_curi: 'StarMoth_mercy',
     dust_archivist_charm: 'DustArchivist_mercy',
-    stage_wraith_will: 'StageWraith_mercy'
+    stage_wraith_will: 'StageWraith_mercy',
+    // NEW mercies
+    mirror_witch_wp: 'MirrorWitch_mercy',
+    widow_weaver_curi: 'WidowWeaver_mercy',
+    cat_lord_charm: 'CatLord_mercy'
 };
 
 const NARRATOR_VOICE_MAP = {
@@ -247,7 +267,12 @@ const NARRATOR_VOICE_MAP = {
     // New shard pickup messages (exact text from npcs.js)
     "The thread glows and the letter N drops softly into your hand.": "narr_pickup_shard_N",
     "The archivist hands you the second N, tears of paper dust in its eyes.": "narr_pickup_shard_N2",
-    "Your line echoes through the empty theater. The wraith hands you the letter E.": "narr_pickup_shard_E"
+    "Your line echoes through the empty theater. The wraith hands you the letter E.": "narr_pickup_shard_E",
+
+    // ---- NEW pickups (1,1 / 2,1 / 5,2) ----
+    "The mirror is cold, but your reflection finally holds still.": "narr_pickup_silver_mirror",
+    "The thread hums softly in your hand.": "narr_pickup_red_thread",
+    "The whisker twitches as if it's still alive.": "narr_pickup_whisker"
 };
 
 // Helper to build the full audio path from a room folder + filename
@@ -259,7 +284,6 @@ function buildVoicePath(filename) {
 
 // ---- Custom event listeners ----
 
-// Listen for voice requests from the rest of the game
 document.addEventListener('voice:play', (e) => {
     const detail = e.detail || {};
     let path = null;
@@ -277,20 +301,17 @@ document.addEventListener('voice:play', (e) => {
     } else if (detail.type === 'message' || detail.type === 'pickup') {
         const filename = NARRATOR_VOICE_MAP[detail.text];
         if (filename) path = buildVoicePath(filename);
-        // pickup messages shouldn't freeze the player
         if (detail.type === 'pickup') freeze = false;
     } else if (detail.type === 'narration') {
-        // room narration is at assets/audio/X-Y.mp3 (top level)
         path = `assets/audio/${detail.roomKey}.mp3`;
-        freeze = false;   // narration already freezes via other means
+        freeze = false;
     } else if (detail.type === 'door') {
-        // door voice path determined by the text index
         const text = detail.text;
         const isLocked = LOCKED_LINES.includes(text);
         const pool = isLocked ? LOCKED_LINES : UNLOCKED_LINES;
         const idx = pool.indexOf(text) + 1;
         if (idx >= 1) path = `assets/audio/doors/door_${isLocked ? 'locked' : 'unlocked'}_${String(idx).padStart(2,'0')}.mp3`;
-        freeze = false;   // doors shouldn't freeze
+        freeze = false;
     }
 
     if (path) {
@@ -300,7 +321,6 @@ document.addEventListener('voice:play', (e) => {
     }
 });
 
-// Stop current voice (called by spacebar)
 document.addEventListener('voice:stop', () => {
     skipVoice();
 });

@@ -18,6 +18,11 @@ const ITEMS = {
     dry_match: { id: 'dry_match', name: 'Dry Match', desc: 'A single dry match, saved for a cold day.', texture: 'assets/dry_match.png', pickupText: 'You take the dry match. It might light something later.' },
     chisel_of_renown: { id: 'chisel_of_renown', name: 'Chisel of Renown', desc: 'A stone‑carving tool that can rewrite one\'s own fate.', texture: 'assets/chisel_of_renown.png', pickupText: 'The chisel feels heavy with possibility.' },
 
+    // ---- NEW items from (1,1), (2,1), (5,2) ----
+    silver_hand_mirror: { id: 'silver_hand_mirror', name: 'Silver Hand Mirror', desc: 'A small, ornate mirror that shows ghostly outlines of hidden things.', texture: 'assets/silver_hand_mirror.png', pickupText: 'The mirror is cold, but your reflection finally holds still.' },
+    red_thread: { id: 'red_thread', name: 'Spool of Red Thread', desc: 'A spool of glistening crimson thread that never runs out.', texture: 'assets/red_thread.png', pickupText: 'The thread hums softly in your hand.' },
+    cat_whisker: { id: 'cat_whisker', name: 'Cat\'s Whisker', desc: 'A long, flexible whisker that twitches faintly.', texture: 'assets/cat_whisker.png', pickupText: 'The whisker twitches as if it\'s still alive.' },
+
     // Permanent stat boosts (not yet placed in world)
     courageous_knot: { id: 'courageous_knot', name: 'Courageous Knot', desc: 'A sailor\'s knot that stiffens your resolve. Permanently raises Willpower by 1.', texture: 'assets/courageous_knot.png', pickupText: 'You feel a surge of courage. Your Willpower has permanently increased.' },
     magnifying_lens: { id: 'magnifying_lens', name: 'Magnifying Lens', desc: 'A brass lens that reveals hidden details. Permanently raises Curiosity by 1.', texture: 'assets/magnifying_lens.png', pickupText: 'The world comes into sharper focus. Your Curiosity has permanently increased.' },
