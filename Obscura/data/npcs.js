@@ -254,7 +254,6 @@ const NPCS = {
         getStartNode() { return flags.rustKeyPlucked ? 'done' : 'start'; }
     },
 
-    // ---- NEW NPCs ----
     Lovelace_the_Fern: {
         id: 'Lovelace_the_Fern', name: 'Lovelace-the-Fern', roomKey: '1,4',
         texture: 'assets/Barnaby_the_Fern.png', position: { x: 0, y: 0.2, z: 0 }, scale: 4.0,
@@ -343,5 +342,129 @@ const NPCS = {
             done: { text: '"Tick… tock… you may pass again, but time is not your friend."', choices: [{ label: "Goodbye.", next: null }] }
         },
         getStartNode() { return false ? 'done' : 'start'; }
+    },
+
+    // ---- NEW NPCs (three rooms) ----
+    Ladder_Keeper: {
+        id: 'Ladder_Keeper', name: 'The Ladder-Keeper', roomKey: '3,5',
+        texture: 'assets/Ladder_Keeper.png', position: { x: 0, y: 0.0, z: 0 }, scale: 3.0,
+        glb: 'assets/Ladder_Keeper.glb', glbScale: 4.0, glbRotation: Math.PI,
+        materialConfig: { roughness: 2.0, metalness: 0.0, emissiveIntensity: 0.1 },
+        faction: 'EnigmaticStar',
+        floatBounce: { amplitude: 0.15, speed: 0.8 },
+        wander: { speed: 0.4, radius: 2, interval: 3 },
+        dialogue: {
+            start: {
+                text: '"The stars keep falling… I stitch them back, but the letters always come loose. Look—one hangs caught in the paper nebula."',
+                choices: [
+                    { label: "Trace the constellation (Curiosity DC 9)", next: 'puzzle' }
+                ]
+            },
+            puzzle: {
+                text: "Follow the silver thread I laid across the dome. Connect the stars without losing your place, and the letter will fall free. (Curiosity DC 9)",
+                choices: [
+                    { label: "Study the chart.", next: async () => {
+                        if (flags.foundShardN) { closeDialogue(); showMessage('You already have the letter N.'); return; }
+                        const res = await mercyRoll('ladder_keeper_curi', performResonanceRoll('curiosity', 9),
+                            '"You have traced it true. The letter belongs to you now."',
+                            async () => { spawnTemporaryItem('shard_N', { x: 0, y: 1.5, z: 1 }); flags.foundShardN = true; updateHUD(); });
+                        if (res.success) {
+                            if (!res.mercy) { showMessage('The thread glows and the letter N drops softly into your hand.'); spawnTemporaryItem('shard_N', { x: 0, y: 1.5, z: 1 }); flags.foundShardN = true; updateHUD(); }
+                            closeDialogue();
+                        } else {
+                            showMessage('The stars shift, and the thread tangles. The moth sighs, a faint papery rustle.'); closeDialogue();
+                        }
+                    }},
+                    { label: "Not yet.", next: null }
+                ]
+            },
+            done: { text: '"The sky is a little brighter now. Thank you."', choices: [{ label: "Goodbye.", next: null }] }
+        },
+        getStartNode() { return flags.foundShardN ? 'done' : 'start'; }
+    },
+
+    Dust_Archivist: {
+        id: 'Dust_Archivist', name: 'The Dust-Archivist', roomKey: '4,5',
+        texture: 'assets/Dust_Archivist.png', position: { x: 0, y: 0.0, z: 0 }, scale: 1.8,
+        glb: 'assets/Dust_Archivist.glb', glbScale: 6.0, glbRotation: Math.PI,
+        materialConfig: { roughness: 1.2, metalness: -1.0, emissiveIntensity: 0.05 },
+        faction: 'MischiefMaker',
+        wander: { speed: 0.3, radius: 2, interval: 3 },
+        dialogue: {
+            start: {
+                text: '"Another visitor… I have so many stories here, but none of them end. Please, don’t ask me to let go of them."',
+                choices: [
+                    { label: "Convince him to part with a story (Charm DC 9)", next: 'charm' }
+                ]
+            },
+            charm: {
+                text: "If you can convince me that your story deserves an ending, I might part with one of these letters. (Charm DC 9)",
+                choices: [
+                    { label: "Tell him your own story.", next: async () => {
+                        if (flags.foundShardN2) { closeDialogue(); showMessage('You already have the second N.'); return; }
+                        const res = await mercyRoll('dust_archivist_charm', performResonanceRoll('charm', 9),
+                            '"You speak with such warmth… Very well. Take this second N, and may your tale find its close."',
+                            async () => { spawnTemporaryItem('shard_N2', { x: 0, y: 1.5, z: 1 }); flags.foundShardN2 = true; updateHUD(); });
+                        if (res.success) {
+                            if (!res.mercy) { showMessage('The archivist hands you the second N, tears of paper dust in its eyes.'); spawnTemporaryItem('shard_N2', { x: 0, y: 1.5, z: 1 }); flags.foundShardN2 = true; updateHUD(); }
+                            closeDialogue();
+                        } else {
+                            showMessage('It shakes its head, clutching the story tighter.'); closeDialogue();
+                        }
+                    }},
+                    { label: "Never mind.", next: null }
+                ]
+            },
+            done: { text: '"When you finish your name, come back and tell me how it ends."', choices: [{ label: "Goodbye.", next: null }] }
+        },
+        getStartNode() { return flags.foundShardN2 ? 'done' : 'start'; }
+    },
+
+    Stage_Wraith: {
+        id: 'Stage_Wraith', name: 'The Stage-Wraith', roomKey: '5,4',
+        texture: 'assets/Stage_Wraith.png', position: { x: -1, y: 2.4, z: -2 }, scale: 2.2,
+        glb: 'assets/Stage_Wraith.glb', glbScale: 10.0, glbRotation: Math.PI/2,
+        materialConfig: { roughness: 0.8, metalness: 0.1, emissiveIntensity: 0.15 },
+        faction: 'Custodian',
+		floatBounce: { amplitude: 0.15, speed: 1.5 },
+        dialogue: {
+            start: {
+                text: '"I have forgotten my last line. The play cannot end until it is spoken. Will you give me a line?"',
+                choices: [
+                    { label: "Give a powerful line (Willpower DC 9)", next: 'will' }
+                ]
+            },
+            will: {
+                text: "Speak any line, but make it mighty enough to close a tragedy. (Willpower DC 9)",
+                choices: [
+                    { label: "Deliver a line.", next: async () => {
+                        if (flags.foundShardE) { closeDialogue(); showMessage('You already have the letter E.'); return; }
+                        const res = await mercyRoll('stage_wraith_will', performResonanceRoll('willpower', 9),
+                            '"That was… almost true. The letter E is yours. Perhaps it will help you finish your own script."',
+                            async () => { spawnTemporaryItem('shard_E', { x: 0, y: 1.5, z: 1 }); flags.foundShardE = true; updateHUD(); });
+                        if (res.success) {
+                            if (!res.mercy) { showMessage('Your line echoes through the empty theater. The wraith hands you the letter E.'); spawnTemporaryItem('shard_E', { x: 0, y: 1.5, z: 1 }); flags.foundShardE = true; updateHUD(); }
+                            closeDialogue();
+                        } else {
+                            showMessage('The wraith frowns. "Not quite… but I shall keep trying."'); closeDialogue();
+                        }
+                    }},
+                    { label: "I need more time.", next: null }
+                ]
+            },
+            done: { text: '"Exit, pursued by a bear. No, that’s not right… Goodbye."', choices: [{ label: "Goodbye.", next: null }] }
+        },
+        getStartNode() { return flags.foundShardE ? 'done' : 'start'; }
+    },
+
+    // Second wraith (no dialogue, just hopping, slightly different phase)
+    Stage_Wraith2: {
+        id: 'Stage_Wraith2', name: 'The Second Stage-Wraith', roomKey: '5,4',
+        texture: 'assets/Stage_Wraith2.png', position: { x: 2, y: 2.2, z: -2 }, scale: 2.2,
+        glb: 'assets/Stage_Wraith2.glb', glbScale: 11.0, glbRotation: -Math.PI/2,
+        materialConfig: { roughness: 1.8, metalness: 0.0, emissiveIntensity: 0.15 },
+        faction: 'Custodian',
+        floatBounce: { amplitude: 0.30, speed: 2.5 },   // different amplitude/speed for out-of-sync hop
+        dialogue: {}
     }
 };

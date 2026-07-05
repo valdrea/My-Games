@@ -84,7 +84,7 @@ function skipVoice() {
 }
 
 /* ------------------------------------------------------------------ */
-/*  VOICE MAPPINGS (identical to what was in hud.js)                   */
+/*  VOICE MAPPINGS                                                     */
 /* ------------------------------------------------------------------ */
 const DIALOGUE_VOICE_MAP = {
     Origami_Crow: {
@@ -154,6 +154,21 @@ const DIALOGUE_VOICE_MAP = {
     Grand_Pendulum: {
         start: 'Pendulum_greeting',
         done: 'Pendulum_farewell'
+    },
+    Ladder_Keeper: {
+        start: 'StarMoth_greeting',      // your audio files are named StarMoth_*
+        puzzle: 'StarMoth_puzzle',
+        done: 'StarMoth_farewell'
+    },
+    Dust_Archivist: {
+        start: 'DustArchivist_greeting',
+        charm: 'DustArchivist_charm',
+        done: 'DustArchivist_farewell'
+    },
+    Stage_Wraith: {
+        start: 'StageWraith_greeting',
+        will: 'StageWraith_will',
+        done: 'StageWraith_farewell'
     }
 };
 
@@ -172,7 +187,10 @@ const MERCY_VOICE_MAP = {
     specter_curi: 'Specter_mercy',
     spindle_wp: 'Spindle_mercy',
     scout_curi: 'Scout_mercy',
-    rust_curi: 'Keeper_mercy'
+    rust_curi: 'Keeper_mercy',
+    ladder_keeper_curi: 'StarMoth_mercy',
+    dust_archivist_charm: 'DustArchivist_mercy',
+    stage_wraith_will: 'StageWraith_mercy'
 };
 
 const NARRATOR_VOICE_MAP = {
@@ -224,7 +242,12 @@ const NARRATOR_VOICE_MAP = {
     "You pocket the skeleton key. It feels important.": "narr_pickup_skeleton_key",
     "You carefully pocket the thistle key.": "narr_pickup_thistle_key",
     "You take the dry match. It might light something later.": "narr_pickup_dry_match",
-    "The chisel feels heavy with possibility.": "narr_pickup_chisel"
+    "The chisel feels heavy with possibility.": "narr_pickup_chisel",
+
+    // New shard pickup messages (exact text from npcs.js)
+    "The thread glows and the letter N drops softly into your hand.": "narr_pickup_shard_N",
+    "The archivist hands you the second N, tears of paper dust in its eyes.": "narr_pickup_shard_N2",
+    "Your line echoes through the empty theater. The wraith hands you the letter E.": "narr_pickup_shard_E"
 };
 
 // Helper to build the full audio path from a room folder + filename
@@ -259,7 +282,7 @@ document.addEventListener('voice:play', (e) => {
     } else if (detail.type === 'narration') {
         // room narration is at assets/audio/X-Y.mp3 (top level)
         path = `assets/audio/${detail.roomKey}.mp3`;
-        freeze = false;   // narration already freezes via other means, but we can keep it false
+        freeze = false;   // narration already freezes via other means
     } else if (detail.type === 'door') {
         // door voice path determined by the text index
         const text = detail.text;

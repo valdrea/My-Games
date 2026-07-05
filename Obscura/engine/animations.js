@@ -93,6 +93,10 @@ function updateAnimations(delta) {
             hb.mesh.position.z = hb.baseZ + forward.z * moveOffset;
             const mirror = (hb.phase === 0 || hb.phase === Math.PI) ? 1 : -1;
             hb.mesh.rotation.y = hb.phase + rotationOffset * mirror;
+            if (hb.colliderMesh) {
+                hb.colliderMesh.position.copy(hb.mesh.position);
+                hb.colliderMesh.rotation.y = hb.mesh.rotation.y;
+            }
         }
     }
 
@@ -117,19 +121,37 @@ function updateAnimations(delta) {
         robin.mesh.position.y = 0.4 + Math.abs(Math.sin(performance.now() * 0.002)) * 0.2;
     }
 
-    // Pendulum swing (faster, deeper)
+    // Pendulum swing
     for (const p of pendulumObjects) {
         const t = performance.now() * 0.001;
         p.mesh.rotation.z = Math.sin(t * 1.2 + p.phase) * 0.3;
     }
 
-    // Cuckoo waddle (robotic, side‑to‑side, no bounce)
+    // Cuckoo waddle
     for (const c of cuckoos) {
         const t = performance.now() * 0.001;
-        const wobble = Math.sin(t * 1.5 + c.phase) * 0.2;    // smaller sway
-        c.mesh.rotation.z = wobble * 0.3;                   // tilting
-        c.mesh.rotation.y = wobble * 0.15;                  // slight body turn
-        // keep position fixed, no bounce
+        const wobble = Math.sin(t * 1.5 + c.phase) * 0.2;
+        c.mesh.rotation.z = wobble * 0.3;
+        c.mesh.rotation.y = wobble * 0.15;
+    }
+
+    // Floating stars (Observatory, 3,5)
+    if (window.stars) {
+        const time = performance.now() * 0.001;
+        for (const s of window.stars) {
+            s.mesh.position.y = s.baseY + Math.sin(time * 0.7 + s.phase) * 0.4;
+        }
+    }
+
+    // Spotlight sliding (Theater, 5,4)
+    if (window.spotlight) {
+        window.spotlight.angle += window.spotlight.speed * delta;
+        const spot = window.spotlight;
+        const tcX = window.theaterCX || 0;
+        const tcZ = window.theaterCZ || 0;
+        spot.mesh.position.x = tcX + Math.cos(spot.angle) * spot.radius;
+        spot.mesh.position.z = tcZ + Math.sin(spot.angle) * spot.radius;
+        spot.mesh.rotation.z = spot.angle;
     }
 
     // Snow

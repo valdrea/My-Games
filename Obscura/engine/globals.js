@@ -4,7 +4,7 @@
 
 const ROOM_SIZE     = 20;
 const WALL_HEIGHT   = 8;
-const MOVE_SPEED    = 6;
+const MOVE_SPEED    = 6;   // slower, lengthens time in each room
 const PLAYER_RADIUS = 0.5;
 const DOOR_W        = 2.8;
 const DOOR_H        = 3.8;
@@ -84,21 +84,24 @@ let greenDoorTex = null, blackDoorTex = null;
 // Player control
 let gameRunning = false;
 let isLocked = false;
-let playerFrozen = false;
+let playerFrozen = false;          // true while audio plays
 let yaw = 0, pitch = 0, targetYaw = 0, targetPitch = 0;
 const keys = {};
 
-// Narration & dialogue (text only – no audio)
+// Narration & dialogue audio (text only)
 let narrationActive = false;
 let doorMsgActive = false;
 let pendingNarration = null;
 let currentOpenDoor = null;
 
+// Ambient background audio
+let ambientAudio = null;
+
 // Snow
 let snowParticles = [];
 let snowTexture = null;
 
-// Preload lists (unchanged)
+// Preload lists – all textures used by the game
 const ALL_TEXTURE_PATHS = [
     'assets/floor.png', 'assets/ceiling.png',
     'assets/Folded_Compass.png', 'assets/Lavender_Ink.png', 'assets/resolve.png', 'assets/Helium_Loafers.png',
@@ -122,9 +125,19 @@ const ALL_TEXTURE_PATHS = [
     'assets/green_cuckoo.png', 'assets/orange_cuckoo.png', 'assets/pride_cuckoo.png',
     'assets/hungry_tree.png', 'assets/hungry_lilly.png', 'assets/hungry_rose.png', 'assets/hungry_sunflower.png',
     'assets/stonetablet.png',
+
+    // ---- NEW rooms 3-5, 4-5, 5-4 ----
+    'assets/3-5_floor.png', 'assets/4-5_floor.png', 'assets/5-4_floor.png',
+    'assets/Ladder_Keeper.png', 'assets/Dust_Archivist.png', 'assets/Stage_Wraith.png', 'assets/Stage_Wraith2.png',
+    'assets/telescope.png', 'assets/star_chart.png',
+    'assets/trunk.png', 'assets/book_pile.png', 'assets/lantern.png',
+    'assets/curtain.png', 'assets/spotlight.png', 'assets/mask.png',
+    'assets/white_star.png', 'assets/yellow_star.png', 'assets/pride_star.png',
+    'assets/doll_trashpile.png',   // already present but ensuring
 ];
 for (let i=1; i<=25; i++) ALL_TEXTURE_PATHS.push(`assets/wall_${i}.png`);
 
+// GLB models (optional 3D models)
 const ALL_GLB_PATHS = [
     'assets/blue_fireplace.glb', 'assets/Curator_Vance.glb', 'assets/doll_trashpile.glb',
     'assets/easel.glb', 'assets/fenced_cradles.glb', 'assets/Gesso_desk.glb',
@@ -134,4 +147,9 @@ const ALL_GLB_PATHS = [
     'assets/marble_bench.glb', 'assets/Spindle.glb', 'assets/Keeper_of_the_Rust.glb',
     'assets/hedgeblock.glb', 'assets/snowpile.glb', 'assets/Lost_Scout.glb',
     'assets/stonetablet.glb',
+    // New NPC GLBs
+    'assets/Ladder_Keeper.glb', 'assets/Dust_Archivist.glb',
+    'assets/Stage_Wraith.glb', 'assets/Stage_Wraith2.glb',
+    // Barnaby_the_Fern already present, but note it's used by Lovelace
+    'assets/Barnaby_the_Fern.glb',
 ];

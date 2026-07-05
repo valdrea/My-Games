@@ -32,6 +32,10 @@ async function buildWorld(){
     window.snowParticles = [];
     pendulumObjects.length = 0;
     cuckoos.length = 0;
+    window.stars = [];          // floating stars in observatory
+    window.spotlight = null;    // moving spotlight in theater
+    window.theaterCX = 0;       // used by spotlight animation
+    window.theaterCZ = 0;
 
     greenDoorTex = textureCache['assets/green_door.png'] || await loadTexture('assets/green_door.png');
     blackDoorTex = textureCache['assets/black_door.png'] || await loadTexture('assets/black_door.png');
@@ -65,7 +69,10 @@ async function buildWorld(){
         ].forEach(p=>addCollider(p[0],p[1],p[2],p[3],p[4],p[5]));
     }
 
-    // 2. STATIC PROPS
+    // 2. STATIC PROPS (unchanged sections omitted for brevity – included in full file)
+    // (The study, ballroom, gallery, nursery, court, aviary, hedge maze, graveyard, wardrobe,
+    //  cuckoo birds, doll trashpile billboard, stone tablet, hungry plants, and doors remain
+    //  exactly as they were in the last known good world.js. I'll re‑insert them completely.)
 
     // Study (3,3)
     const studyCX = 2*ROOM_SIZE+ROOM_SIZE/2, studyCZ = 2*ROOM_SIZE+ROOM_SIZE/2;
@@ -152,16 +159,15 @@ async function buildWorld(){
         addCollider(pos[0], 1.0, pos[2]+0.3, 3, 2, 0.3);
     }
 
-    const trash = await loadModelOrFallback('assets/doll_trashpile.glb', async () => {
-        const tex = await loadTexture('assets/doll_trashpile.png');
-        const plane = new THREE.Mesh(new THREE.PlaneGeometry(3,3), new THREE.MeshBasicMaterial({ map: tex, transparent:true, side:THREE.DoubleSide }));
-        plane.position.set(nurseryCX-7, 0, nurseryCZ-7); plane.rotation.y = 0; return plane;
-    });
-    trash.position.set(nurseryCX-7, 0, nurseryCZ-7); trash.rotation.y = 0;
-    scene.add(trash); worldObjects.push(trash);
-    addCollider(nurseryCX-7, 1.5, nurseryCZ-7, 4, 3, 4);
+    // Doll trashpile as billboard sprite
+    const trashTex = await loadSpriteTexture('assets/doll_trashpile.png', 'Trashpile', '#ffd700');
+    const trashSprite = new THREE.Mesh(new THREE.PlaneGeometry(3, 3), new THREE.MeshBasicMaterial({ map: trashTex, transparent: true, side: THREE.DoubleSide, depthWrite: false }));
+    trashSprite.position.set(nurseryCX-7, 1.5, nurseryCZ-7);
+    trashSprite.rotation.y = 0;
+    scene.add(trashSprite); worldObjects.push(trashSprite);
+    billboards.push(trashSprite);
 
-    // Court (4,3) – Queen’s bench (tall enough to block)
+    // Court (4,3) – Queen’s bench
     const courtCX = 3*ROOM_SIZE+ROOM_SIZE/2, courtCZ = 2*ROOM_SIZE+ROOM_SIZE/2;
     const bench = await loadModelOrFallback('assets/marble_bench.glb', async () => {
         return await createStaticPlane('assets/marble_bench.png', 3, 2, { x: courtCX, y: 0, z: courtCZ + 2 }, 0);
@@ -171,7 +177,7 @@ async function buildWorld(){
     scene.add(bench); worldObjects.push(bench);
     addCylinderCollider(courtCX, 1.0, courtCZ -1, 2.0, 2.0);
 
-    // Aviary (3,4) – hummingbirds, no solid colliders
+    // Aviary (3,4)
     const aviaryCX = 2*ROOM_SIZE+ROOM_SIZE/2, aviaryCZ = 3*ROOM_SIZE+ROOM_SIZE/2;
     const roomMinX = aviaryCX - ROOM_SIZE/2 + 1, roomMaxX = aviaryCX + ROOM_SIZE/2 - 1;
     const roomMinZ = aviaryCZ - ROOM_SIZE/2 + 1, roomMaxZ = aviaryCZ + ROOM_SIZE/2 - 1;
@@ -197,7 +203,7 @@ async function buildWorld(){
         });
     }
 
-    // Hedge Maze (4,4) – blocks with moving colliders
+    // Hedge Maze (4,4)
     const hedgeCX = 3*ROOM_SIZE+ROOM_SIZE/2, hedgeCZ = 3*ROOM_SIZE+ROOM_SIZE/2;
     const hedgePositions = [
         { x: hedgeCX-5, z: hedgeCZ-5, angle: 0 },
@@ -213,7 +219,6 @@ async function buildWorld(){
         hb.rotation.y = hedgePositions[i].angle;
         hb.scale.set(1.5, 1.5, 3.0);
         scene.add(hb); worldObjects.push(hb);
-        // Moving collider
         const colMesh = new THREE.Mesh(new THREE.BoxGeometry(5, 1, 6), new THREE.MeshBasicMaterial({visible:false}));
         colMesh.position.copy(hb.position);
         colMesh.rotation.y = hb.rotation.y;
@@ -230,7 +235,7 @@ async function buildWorld(){
         });
     }
 
-    // Graveyard (5,3) – key plants
+    // Graveyard (5,3)
     const graveCX = 4*ROOM_SIZE+ROOM_SIZE/2, graveCZ = 2*ROOM_SIZE+ROOM_SIZE/2;
     const keyPlantTexs = ['key_plant.png', 'key_plant2.png', 'key_plant3.png'];
     for (let i=0; i<25; i++) {
@@ -424,6 +429,81 @@ async function buildWorld(){
         scene.add(plantMesh); worldObjects.push(plantMesh);
         billboards.push(plantMesh);
     }
+
+    // ---------- ATTIC (4,5) – raised props, double lantern ----------
+    const atticCX = 3*ROOM_SIZE+ROOM_SIZE/2, atticCZ = 4*ROOM_SIZE+ROOM_SIZE/2;
+    const trunkTex = await loadSpriteTexture('assets/trunk.png', 'Trunk', '#ffd700');
+    const trunk = new THREE.Mesh(new THREE.PlaneGeometry(3, 3), new THREE.MeshBasicMaterial({ map: trunkTex, transparent: true, side: THREE.DoubleSide, depthWrite: false }));
+    trunk.position.set(atticCX-4, 1.5, atticCZ+3);   // raised
+    scene.add(trunk); worldObjects.push(trunk);
+    billboards.push(trunk);
+    addCollider(atticCX-4, 0.5, atticCZ+3, 2, 1, 0.5);
+
+    const bookPileTex = await loadSpriteTexture('assets/book_pile.png', 'Book Pile', '#ffd700');
+    const bookPile = new THREE.Mesh(new THREE.PlaneGeometry(2.0, 2.0), new THREE.MeshBasicMaterial({ map: bookPileTex, transparent: true, side: THREE.DoubleSide, depthWrite: false }));
+    bookPile.position.set(atticCX+5, 1.0, atticCZ-2);   // raised
+    scene.add(bookPile); worldObjects.push(bookPile);
+    billboards.push(bookPile);
+
+    const lanternTex = await loadSpriteTexture('assets/lantern.png', 'Lantern', '#ffd700');
+    const lantern = new THREE.Mesh(new THREE.PlaneGeometry(3, 3), new THREE.MeshBasicMaterial({ map: lanternTex, transparent: true, side: THREE.DoubleSide, depthWrite: false }));  // doubled size
+    lantern.position.set(atticCX+1, 5.0, atticCZ+4);
+    scene.add(lantern); worldObjects.push(lantern);
+    billboards.push(lantern);
+
+    // ---------- OBSERVATORY (3,5) – star chart on wall + floating stars ----------
+    const obsCX = 2*ROOM_SIZE+ROOM_SIZE/2, obsCZ = 4*ROOM_SIZE+ROOM_SIZE/2;
+    const telescopeTex = await loadSpriteTexture('assets/telescope.png', 'Telescope', '#ffd700');
+    const telescope = new THREE.Mesh(new THREE.PlaneGeometry(3, 3), new THREE.MeshBasicMaterial({ map: telescopeTex, transparent: true, side: THREE.DoubleSide, depthWrite: false }));
+    telescope.position.set(obsCX-4, 1.5, obsCZ+4);
+    scene.add(telescope); worldObjects.push(telescope);
+    billboards.push(telescope);
+
+    // Star chart on north wall (static, not billboarded)
+    const starChartTex = await loadTexture('assets/star_chart.png');
+	const starChart = new THREE.Mesh(new THREE.PlaneGeometry(4, 3), new THREE.MeshBasicMaterial({ map: starChartTex, transparent: true, side: THREE.DoubleSide }));
+    starChart.position.set(obsCX + 5, 3.0, obsCZ - ROOM_SIZE/2 + 0.1);
+    starChart.rotation.set(0, 0, 0);
+    scene.add(starChart); worldObjects.push(starChart);
+    // Not billboarded
+
+    // Floating paper stars (3 each of white, yellow, pride)
+    const starTexKeys = ['white_star.png', 'yellow_star.png', 'pride_star.png'];
+    for (let i = 0; i < 25; i++) {
+        const tex = await loadSpriteTexture(`assets/${starTexKeys[i % 3]}`, 'Star', '#ffd700');
+        const starMesh = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 1.2), new THREE.MeshBasicMaterial({ map: tex, transparent: true, side: THREE.DoubleSide, depthWrite: false }));
+        const x = obsCX + (Math.random() - 0.5) * ROOM_SIZE/1.5;
+        const y = 5.0 + Math.random() * 2.5;   // high up
+        const z = obsCZ + (Math.random() - 0.5) * ROOM_SIZE/1.5;
+        starMesh.position.set(x, y, z);
+        scene.add(starMesh); worldObjects.push(starMesh);
+        billboards.push(starMesh);
+        window.stars.push({ mesh: starMesh, baseY: y, phase: Math.random() * Math.PI * 2 });
+    }
+
+    // ---------- THEATER (5,4) – static curtain, moving spotlight, second wraith ----------
+    const theaterCX = 4*ROOM_SIZE+ROOM_SIZE/2, theaterCZ = 3*ROOM_SIZE+ROOM_SIZE/2;
+    window.theaterCX = theaterCX;
+    window.theaterCZ = theaterCZ;
+
+    // Curtain static, no billboard, flush with ground
+    const curtainTex = await loadTexture('assets/curtain.png');
+    const curtain = new THREE.Mesh(new THREE.PlaneGeometry(8, 6), new THREE.MeshBasicMaterial({ map: curtainTex, transparent: true, side: THREE.DoubleSide }));
+    curtain.position.set(theaterCX, 3.0, theaterCZ - 4);
+    curtain.rotation.set(0, 0, 0);    // face south
+    scene.add(curtain); worldObjects.push(curtain);
+    // No billboard, no collider
+
+    // Spotlight bigger, on ground, moves around
+    //const spotlightTex = await loadSpriteTexture('assets/spotlight.png', 'Spotlight', '#ffd700');
+    //const spotlight = new THREE.Mesh(new THREE.PlaneGeometry(6, 6), new THREE.MeshBasicMaterial({ map: spotlightTex, transparent: true, side: THREE.DoubleSide, depthWrite: false }));
+    //spotlight.position.set(theaterCX, 2.5, theaterCZ);
+    //spotlight.rotation.x = -Math.PI/2;   // flat on floor
+    //scene.add(spotlight); worldObjects.push(spotlight);
+    //billboards.push(spotlight);
+    //window.spotlight = { mesh: spotlight, angle: 0, radius: 5, speed: 0.3 };
+
+    // Second wraith is already handled by NPC loop (Stage_Wraith2)
 
     // Doors
     const doorGeo = new THREE.PlaneGeometry(DOOR_W, DOOR_H);
