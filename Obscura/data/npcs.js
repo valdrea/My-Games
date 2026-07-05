@@ -573,7 +573,7 @@ const NPCS = {
                     { label: "Never mind.", next: null }
                 ]
             },
-            done: { text: '"Now leave. I have a nap to attend to."', choices: [{ label: "Goodbye.", next: null }] }
+            done: { text: '"Now leave, I have a nap to attend to."', choices: [{ label: "Goodbye.", next: null }] }
         },
         getStartNode() { return flags.whiskerGiven ? 'done' : 'start'; }
     }
