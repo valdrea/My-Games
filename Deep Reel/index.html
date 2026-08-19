@@ -278,6 +278,7 @@ const REEL_CONFIG = {
   rare:     { pull: 32, surgeMult: 2.8, surgeIntervalMin: 1000, surgeIntervalMax: 1500, surgeDurationMin: 500, surgeDurationMax: 700, safeMin: 30, safeMax: 80, progressRate: 32 },
 };
 const REEL_RATE = 55; // tension gained per second while holding
+const RESULT_PAUSE_MS = 1400; // forced breather after a catch/escape before you can cast again
 
 // ---------- state ----------
 const STATE = { IDLE: "idle", CHARGING: "charging", WAITING_BITE: "bite", REELING: "reeling", RESULT: "result" };
@@ -328,6 +329,7 @@ function triangleWave(t, periodMs) {
 
 function startCharge() {
   if (state !== STATE.IDLE && state !== STATE.RESULT) return;
+  if (state === STATE.RESULT && performance.now() - resultTimer < RESULT_PAUSE_MS) return;
   state = STATE.CHARGING;
   chargeStart = performance.now();
   newSweetZone();
