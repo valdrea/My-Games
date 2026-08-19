@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Deep Reel - Step 3 Prototype</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: #0a0e14;
+    color: #dfe6ee;
+    font-family: 'Segoe UI', Tahoma, sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px 12px 60px;
+  }
+  h1 { margin: 0 0 4px; font-size: 22px; letter-spacing: 1px; }
+  .subtitle { color: #7c8ba1; font-size: 13px; margin-bottom: 18px; }
+  #stage-wrap {
+    position: relative;
+    width: 100%;
+    max-width: 900px;
+  }
+  canvas {
+    width: 100%;
+    height: auto;
+    display: block;
+    background: #06202e;
+    border: 2px solid #1c3a4d;
+    border-radius: 6px;
+  }
+  #meter-wrap {
+    width: 100%;
+    max-width: 900px;
+    margin-top: 14px;
+  }
+  #meter-bar {
+    position: relative;
+    height: 26px;
+    background: #12202c;
+    border: 2px solid #1c3a4d;
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  #meter-zone-shallow, #meter-zone-mid, #meter-zone-deep, #meter-zone-trench {
+    position: absolute;
+    top: 0; bottom: 0;
+    opacity: 0.35;
+  }
+  #meter-zone-shallow { left: 0%;   width: 25%; background: #2a6e3f; }
+  #meter-zone-mid     { left: 25%;  width: 25%; background: #2a5a6e; }
+  #meter-zone-deep    { left: 50%;  width: 25%; background: #2a3f6e; }
+  #meter-zone-trench  { left: 75%;  width: 25%; background: #5a2a6e; }
+  #sweet-zone {
+    position: absolute;
+    top: 0; bottom: 0;
+    background: rgba(255, 214, 92, 0.55);
+    border-left: 2px solid #ffd65c;
+    border-right: 2px solid #ffd65c;
+  }
+  #meter-marker {
+    position: absolute;
+    top: -3px; bottom: -3px;
+    width: 4px;
+    background: #ffffff;
+    box-shadow: 0 0 6px #ffffff;
+  }
+  #zone-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    color: #7c8ba1;
+    margin-top: 4px;
+    padding: 0 2px;
+  }
+  #reel-wrap {
+    display: none;
+    width: 100%;
+    max-width: 900px;
+    margin-top: 14px;
+  }
+  #tension-bar {
+    position: relative;
+    height: 26px;
+    background: #12202c;
+    border: 2px solid #1c3a4d;
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  #tension-bar.surge {
+    animation: surge-flash 0.25s infinite alternate;
+  }
+  @keyframes surge-flash {
+    from { box-shadow: inset 0 0 0 rgba(224,75,62,0); }
+    to   { box-shadow: inset 0 0 16px rgba(224,75,62,0.9); }
+  }
+  #tension-safe {
+    position: absolute;
+    top: 0; bottom: 0;
+    background: rgba(120, 220, 140, 0.30);
+    border-left: 2px solid #78dc8c;
+    border-right: 2px solid #78dc8c;
+  }
+  #tension-fill {
+    position: absolute;
+    top: 0; bottom: 0;
+    left: 0;
+    width: 50%;
+    background: rgba(126, 200, 242, 0.55);
+    border-right: 3px solid #bfe6ff;
+  }
+  #progress-bar-outer {
+    height: 10px;
+    background: #12202c;
+    border: 1px solid #1c3a4d;
+    border-radius: 4px;
+    margin-top: 6px;
+    overflow: hidden;
+  }
+  #progress-fill {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, #2a9d6f, #4fd39b);
+  }
+  #reel-hint {
+    font-size: 12px;
+    color: #7c8ba1;
+    margin-top: 4px;
+    text-align: center;
+  }
+  #status-line {
+    margin-top: 14px;
+    min-height: 24px;
+    font-size: 15px;
+    text-align: center;
+  }
+  #instructions {
+    font-size: 12px;
+    color: #7c8ba1;
+    margin-top: 4px;
+    text-align: center;
+  }
+  #panels {
+    width: 100%;
+    max-width: 900px;
+    display: flex;
+    gap: 14px;
+    margin-top: 18px;
+    flex-wrap: wrap;
+  }
+  .panel {
+    flex: 1;
+    min-width: 220px;
+    background: #101820;
+    border: 1px solid #1c3a4d;
+    border-radius: 6px;
+    padding: 12px 14px;
+  }
+  .panel h2 {
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #7c8ba1;
+    margin: 0 0 8px;
+  }
+  #catch-log {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    max-height: 220px;
+    overflow-y: auto;
+    font-size: 13px;
+  }
+  #catch-log li {
+    padding: 5px 0;
+    border-bottom: 1px solid #1c2a35;
+  }
+  #catch-log li:last-child { border-bottom: none; }
+  .tier-junk     { color: #8a97a6; }
+  .tier-common   { color: #9fd8a3; }
+  .tier-uncommon { color: #7ec8f2; }
+  .tier-rare     { color: #e0b6ff; }
+  #stats-list { font-size: 13px; line-height: 1.9; }
+  #stats-list span { color: #ffffff; font-weight: 600; }
+</style>
+</head>
+<body>
+
+<h1>DEEP REEL</h1>
+<div class="subtitle">Step 3 prototype &mdash; casting + reel-in fight + zone-based catch tables</div>
+
+<div id="stage-wrap">
+  <canvas id="stage" width="900" height="420"></canvas>
+</div>
+
+<div id="meter-wrap">
+  <div id="meter-bar">
+    <div id="meter-zone-shallow"></div>
+    <div id="meter-zone-mid"></div>
+    <div id="meter-zone-deep"></div>
+    <div id="meter-zone-trench"></div>
+    <div id="sweet-zone"></div>
+    <div id="meter-marker"></div>
+  </div>
+  <div id="zone-labels">
+    <span>Shallows</span><span>Mid-Water</span><span>Deep Water</span><span>The Trench</span>
+  </div>
+</div>
+
+<div id="reel-wrap">
+  <div id="tension-bar">
+    <div id="tension-safe"></div>
+    <div id="tension-fill"></div>
+  </div>
+  <div id="progress-bar-outer"><div id="progress-fill"></div></div>
+  <div id="reel-hint">Hold SPACE to reel. Stay in the green band &mdash; watch for surges.</div>
+</div>
+
+<div id="status-line">Hold SPACE (or click the boat) to charge your cast.</div>
+<div id="instructions">Release inside the glowing gold band for a clean cast &mdash; clean casts land better catches.</div>
+
+<div id="panels">
+  <div class="panel">
+    <h2>Catch Log</h2>
+    <ul id="catch-log"><li style="color:#4c5a68;">Nothing caught yet.</li></ul>
+  </div>
+  <div class="panel">
+    <h2>Session Stats</h2>
+    <div id="stats-list">
+      Casts: <span id="stat-casts">0</span><br>
+      Clean casts: <span id="stat-clean">0</span><br>
+      Catches: <span id="stat-catches">0</span><br>
+      Escaped: <span id="stat-escaped">0</span><br>
+      Biggest catch: <span id="stat-biggest">&mdash;</span>
+    </div>
+  </div>
+</div>
+
+<script>
+// ---------- catch data table (edit freely to add/tune fish & items) ----------
+const CATCH_TABLE = [
+  { name: "Rusty Tin Can",     tier: "junk",     weight: 14, cleanWeight: 5,  minSize: 3,  maxSize: 5,  value: 1  },
+  { name: "Old Boot",          tier: "junk",     weight: 12, cleanWeight: 4,  minSize: 8,  maxSize: 11, value: 1  },
+  { name: "Tangled Seaweed",   tier: "junk",     weight: 10, cleanWeight: 3,  minSize: 6,  maxSize: 14, value: 1  },
+  { name: "Broken Bottle",     tier: "junk",     weight: 8,  cleanWeight: 3,  minSize: 4,  maxSize: 7,  value: 2  },
+
+  { name: "Bluegill",          tier: "common",   weight: 16, cleanWeight: 12, minSize: 4,  maxSize: 8,  value: 3  },
+  { name: "Perch",             tier: "common",   weight: 14, cleanWeight: 12, minSize: 5,  maxSize: 10, value: 4  },
+  { name: "Catfish",           tier: "common",   weight: 10, cleanWeight: 10, minSize: 8,  maxSize: 18, value: 6  },
+
+  { name: "Largemouth Bass",   tier: "uncommon", weight: 6,  cleanWeight: 14, minSize: 10, maxSize: 22, value: 12 },
+  { name: "Channel Cat",       tier: "uncommon", weight: 5,  cleanWeight: 12, minSize: 12, maxSize: 26, value: 15 },
+
+  { name: "Golden Koi",        tier: "rare",     weight: 1,  cleanWeight: 8,  minSize: 14, maxSize: 24, value: 40 },
+  { name: "Ancient Sturgeon",  tier: "rare",     weight: 1,  cleanWeight: 6,  minSize: 30, maxSize: 60, value: 75 },
+];
+
+// ---------- zones ----------
+// Each zone re-weights the catch table by tier. A tier multiplier of 0 means
+// that tier can't show up at all in that zone (e.g. no rare fish in the
+// Shallows). Tune these numbers to change how "safe vs risky" each zone
+// feels - no other code needs to change.
+const ZONES = [
+  { name: "Shallows",   tierMult: { junk: 1.4, common: 1.15, uncommon: 0,   rare: 0   } },
+  { name: "Mid-Water",  tierMult: { junk: 0.9, common: 1.3,  uncommon: 0.9, rare: 0   } },
+  { name: "Deep Water", tierMult: { junk: 0.4, common: 0.8,  uncommon: 1.4, rare: 0.6 } },
+  { name: "The Trench", tierMult: { junk: 0.2, common: 0.4,  uncommon: 1.1, rare: 1.8 } },
+];
+
+// reel-in fight difficulty per tier: how hard it pulls, how often/hard it
+// surges, how wide the safe tension band is, and how fast progress builds
+// while tension stays inside that band. Junk has no entry - it never fights.
+const REEL_CONFIG = {
+  common:   { pull: 20, surgeMult: 2.2, surgeIntervalMin: 1800, surgeIntervalMax: 2600, surgeDurationMin: 400, surgeDurationMax: 600, safeMin: 20, safeMax: 90, progressRate: 55 },
+  uncommon: { pull: 26, surgeMult: 2.5, surgeIntervalMin: 1400, surgeIntervalMax: 2000, surgeDurationMin: 450, surgeDurationMax: 650, safeMin: 25, safeMax: 85, progressRate: 42 },
+  rare:     { pull: 32, surgeMult: 2.8, surgeIntervalMin: 1000, surgeIntervalMax: 1500, surgeDurationMin: 500, surgeDurationMax: 700, safeMin: 30, safeMax: 80, progressRate: 32 },
+};
+const REEL_RATE = 55; // tension gained per second while holding
+
+// ---------- state ----------
+const STATE = { IDLE: "idle", CHARGING: "charging", WAITING_BITE: "bite", REELING: "reeling", RESULT: "result" };
+let state = STATE.IDLE;
+let chargeStart = 0;
+let markerPos = 0;          // 0-100
+let sweetZoneStart = 30;
+let sweetZoneWidth = 18;
+let lastCastPower = 0;
+let lastCastClean = false;
+let bobberX = 0.15;         // 0-1 fraction across water, used for drawing
+let resultTimer = 0;
+let boatBobPhase = 0;
+let isHolding = false;
+
+let statCasts = 0, statClean = 0, statCatches = 0, statEscapes = 0, biggestCatch = null;
+
+// reel-in fight state
+let reelEntry = null, reelZoneName = '', reelClean = false, reelConfig = null;
+let tension = 50, progress = 0;
+let inSurge = false, nextSurgeTime = 0, surgeEndTime = 0;
+let lastTickTime = 0;
+
+const meterMarker = document.getElementById('meter-marker');
+const sweetZoneEl = document.getElementById('sweet-zone');
+const meterWrap = document.getElementById('meter-wrap');
+const reelWrap = document.getElementById('reel-wrap');
+const tensionBar = document.getElementById('tension-bar');
+const tensionSafe = document.getElementById('tension-safe');
+const tensionFill = document.getElementById('tension-fill');
+const progressFill = document.getElementById('progress-fill');
+const statusLine = document.getElementById('status-line');
+const catchLog = document.getElementById('catch-log');
+const canvas = document.getElementById('stage');
+const ctx = canvas.getContext('2d');
+
+function newSweetZone() {
+  sweetZoneWidth = 14 + Math.random() * 10;      // 14-24 wide
+  sweetZoneStart = 5 + Math.random() * (95 - sweetZoneWidth);
+  sweetZoneEl.style.left = sweetZoneStart + '%';
+  sweetZoneEl.style.width = sweetZoneWidth + '%';
+}
+
+function triangleWave(t, periodMs) {
+  const phase = (t % periodMs) / periodMs;   // 0-1
+  return phase < 0.5 ? phase * 2 : 2 - phase * 2; // 0->1->0
+}
+
+function startCharge() {
+  if (state !== STATE.IDLE && state !== STATE.RESULT) return;
+  state = STATE.CHARGING;
+  chargeStart = performance.now();
+  newSweetZone();
+  statusLine.textContent = "Charging... release for a clean cast!";
+}
+
+function releaseCast() {
+  if (state !== STATE.CHARGING) return;
+  const power = markerPos;
+  const clean = power >= sweetZoneStart && power <= (sweetZoneStart + sweetZoneWidth);
+
+  lastCastPower = power;
+  lastCastClean = clean;
+  bobberX = 0.12 + (power / 100) * 0.72;
+
+  statCasts++;
+  if (clean) statClean++;
+  document.getElementById('stat-casts').textContent = statCasts;
+  document.getElementById('stat-clean').textContent = statClean;
+
+  const zoneIndex = Math.min(3, Math.floor(power / 25));
+  const zoneName = ZONES[zoneIndex].name;
+
+  state = STATE.WAITING_BITE;
+  resultTimer = performance.now();
+  const biteDelay = clean ? 350 + Math.random() * 350 : 500 + Math.random() * 700;
+  statusLine.textContent = clean
+    ? `Clean cast into ${zoneName}. Something bites fast...`
+    : `Cast lands in ${zoneName}. Waiting...`;
+
+  setTimeout(() => onBite(zoneIndex, clean), biteDelay);
+}
+
+function weightedPick(zoneIndex, clean) {
+  const mult = ZONES[zoneIndex].tierMult;
+  const pool = CATCH_TABLE
+    .map(entry => ({ entry, w: (clean ? entry.cleanWeight : entry.weight) * (mult[entry.tier] ?? 1) }))
+    .filter(x => x.w > 0);
+
+  const total = pool.reduce((sum, x) => sum + x.w, 0);
+  let roll = Math.random() * total;
+  for (const x of pool) {
+    roll -= x.w;
+    if (roll <= 0) return x.entry;
+  }
+  return pool[pool.length - 1].entry;
+}
+
+function onBite(zoneIndex, clean) {
+  const zoneName = ZONES[zoneIndex].name;
+  const entry = weightedPick(zoneIndex, clean);
+  if (entry.tier === 'junk') {
+    landCatch(entry, zoneName, clean, false);
+    return;
+  }
+  startReel(entry, zoneName, clean);
+}
+
+function startReel(entry, zoneName, clean) {
+  reelEntry = entry;
+  reelZoneName = zoneName;
+  reelClean = clean;
+  reelConfig = REEL_CONFIG[entry.tier] || REEL_CONFIG.common;
+  tension = 50;
+  progress = 0;
+  inSurge = false;
+  const now = performance.now();
+  nextSurgeTime = now + reelConfig.surgeIntervalMin + Math.random() * (reelConfig.surgeIntervalMax - reelConfig.surgeIntervalMin);
+  lastTickTime = now;
+  state = STATE.REELING;
+
+  meterWrap.style.display = 'none';
+  reelWrap.style.display = 'block';
+  tensionSafe.style.left = reelConfig.safeMin + '%';
+  tensionSafe.style.width = (reelConfig.safeMax - reelConfig.safeMin) + '%';
+  statusLine.textContent = "Something's fighting! Hold SPACE to reel it in.";
+}
+
+function updateReel(now) {
+  const dt = Math.min(0.05, (now - lastTickTime) / 1000);
+  lastTickTime = now;
+
+  if (now >= nextSurgeTime && !inSurge) {
+    inSurge = true;
+    surgeEndTime = now + reelConfig.surgeDurationMin + Math.random() * (reelConfig.surgeDurationMax - reelConfig.surgeDurationMin);
+    tensionBar.classList.add('surge');
+    statusLine.textContent = 'It surges! Hold on!';
+  }
+  if (inSurge && now >= surgeEndTime) {
+    inSurge = false;
+    tensionBar.classList.remove('surge');
+    nextSurgeTime = now + reelConfig.surgeIntervalMin + Math.random() * (reelConfig.surgeIntervalMax - reelConfig.surgeIntervalMin);
+    statusLine.textContent = "Something's fighting! Hold SPACE to reel it in.";
+  }
+
+  const pull = reelConfig.pull * (inSurge ? reelConfig.surgeMult : 1);
+  tension += ((isHolding ? REEL_RATE : 0) - pull) * dt;
+  tension = Math.max(0, Math.min(100, tension));
+
+  if (tension > reelConfig.safeMin && tension < reelConfig.safeMax) {
+    progress += reelConfig.progressRate * dt;
+  }
+  progress = Math.min(100, progress);
+
+  tensionFill.style.width = tension + '%';
+  progressFill.style.width = progress + '%';
+
+  if (tension <= 0) { escapeCatch('It fought free and got away!'); return; }
+  if (tension >= 100) { escapeCatch('The line snapped!'); return; }
+  if (progress >= 100) { landCatch(reelEntry, reelZoneName, reelClean, true); return; }
+}
+
+function escapeCatch(message) {
+  statEscapes++;
+  document.getElementById('stat-escaped').textContent = statEscapes;
+  tensionBar.classList.remove('surge');
+  reelWrap.style.display = 'none';
+  meterWrap.style.display = 'block';
+  statusLine.textContent = message + ' Hold to cast again.';
+  state = STATE.RESULT;
+  resultTimer = performance.now();
+}
+
+function landCatch(entry, zoneName, clean, fought) {
+  const size = (entry.minSize + Math.random() * (entry.maxSize - entry.minSize));
+  const sizeStr = size.toFixed(1);
+
+  statCatches++;
+  document.getElementById('stat-catches').textContent = statCatches;
+
+  if (!biggestCatch || size > biggestCatch.size) {
+    biggestCatch = { name: entry.name, size };
+    document.getElementById('stat-biggest').textContent = `${entry.name} (${sizeStr}")`;
+  }
+
+  const li = document.createElement('li');
+  li.innerHTML = `<span class="tier-${entry.tier}">${entry.name}</span> &mdash; ${sizeStr}" &mdash; ${zoneName}${clean ? ' (clean cast)' : ''}${fought ? ' (hard fight)' : ''} &mdash; worth ${entry.value}g`;
+  if (catchLog.firstChild && catchLog.firstChild.style && catchLog.firstChild.style.color === 'rgb(76, 90, 104)') {
+    catchLog.innerHTML = '';
+  }
+  catchLog.insertBefore(li, catchLog.firstChild);
+  while (catchLog.children.length > 25) catchLog.removeChild(catchLog.lastChild);
+
+  tensionBar.classList.remove('surge');
+  reelWrap.style.display = 'none';
+  meterWrap.style.display = 'block';
+
+  statusLine.textContent = `Caught: ${entry.name} (${sizeStr}")! Hold to cast again.`;
+  state = STATE.RESULT;
+  resultTimer = performance.now();
+}
+
+// ---------- input ----------
+// isHolding drives the reel-in minigame; startCharge/releaseCast guard
+// themselves so pressing space mid-fight only affects the reel, not casting.
+window.addEventListener('keydown', e => {
+  if (e.code === 'Space') {
+    e.preventDefault();
+    isHolding = true;
+    startCharge();
+  }
+});
+window.addEventListener('keyup', e => {
+  if (e.code === 'Space') {
+    e.preventDefault();
+    isHolding = false;
+    if (state === STATE.CHARGING) releaseCast();
+  }
+});
+canvas.addEventListener('mousedown', () => { isHolding = true; startCharge(); });
+window.addEventListener('mouseup', () => {
+  isHolding = false;
+  if (state === STATE.CHARGING) releaseCast();
+});
+
+// ---------- render loop ----------
+function drawScene(now) {
+  const w = canvas.width, h = canvas.height;
+  const waterLine = h * 0.45;
+
+  const skyGrad = ctx.createLinearGradient(0, 0, 0, waterLine);
+  skyGrad.addColorStop(0, '#0d1b2a');
+  skyGrad.addColorStop(1, '#1c3a4d');
+  ctx.fillStyle = skyGrad;
+  ctx.fillRect(0, 0, w, waterLine);
+
+  const waterGrad = ctx.createLinearGradient(0, waterLine, 0, h);
+  waterGrad.addColorStop(0, '#12455c');
+  waterGrad.addColorStop(1, '#062230');
+  ctx.fillStyle = waterGrad;
+  ctx.fillRect(0, waterLine, w, h - waterLine);
+
+  ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+  for (let i = 0; i < 6; i++) {
+    const y = waterLine + 20 + i * 28 + Math.sin(now / 900 + i) * 4;
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(w, y);
+    ctx.stroke();
+  }
+
+  boatBobPhase = now / 500;
+  const boatX = w * 0.12;
+  const boatY = waterLine - 6 + Math.sin(boatBobPhase) * 4;
+  ctx.fillStyle = '#5c3a21';
+  ctx.beginPath();
+  ctx.moveTo(boatX - 55, boatY);
+  ctx.lineTo(boatX + 55, boatY);
+  ctx.lineTo(boatX + 40, boatY + 26);
+  ctx.lineTo(boatX - 40, boatY + 26);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = '#7a5230';
+  ctx.fillRect(boatX - 45, boatY - 8, 90, 10);
+
+  ctx.fillStyle = '#3c2513';
+  ctx.fillRect(boatX - 2, boatY - 46, 4, 40);
+  ctx.beginPath();
+  ctx.moveTo(boatX, boatY - 44);
+  ctx.lineTo(boatX + 26, boatY - 34);
+  ctx.lineTo(boatX, boatY - 24);
+  ctx.closePath();
+  ctx.fillStyle = '#8a6a1c';
+  ctx.fill();
+
+  if (state === STATE.WAITING_BITE || state === STATE.REELING || state === STATE.RESULT) {
+    const bx = w * bobberX;
+    let jitter = Math.sin(now / 200) * (state === STATE.WAITING_BITE ? 5 : 1.5);
+    if (state === STATE.REELING) {
+      jitter = Math.sin(now / (inSurge ? 60 : 140)) * (inSurge ? 10 : 4);
+    }
+    const by = waterLine + 18 + jitter;
+    ctx.strokeStyle = 'rgba(230,230,230,0.6)';
+    ctx.beginPath();
+    ctx.moveTo(boatX + 20, boatY - 20);
+    ctx.lineTo(bx, by);
+    ctx.stroke();
+
+    ctx.fillStyle = '#e04b3e';
+    ctx.beginPath();
+    ctx.arc(bx, by, 6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#f2f2f2';
+    ctx.beginPath();
+    ctx.arc(bx, by - 3, 3, 0, Math.PI * 2);
+    ctx.fill();
+
+    if (state === STATE.RESULT) {
+      ctx.strokeStyle = 'rgba(200,230,255,0.5)';
+      const t = (now - resultTimer) / 600;
+      if (t < 1) {
+        ctx.beginPath();
+        ctx.arc(bx, by, 8 + t * 22, 0, Math.PI * 2);
+        ctx.globalAlpha = 1 - t;
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+      }
+    }
+  }
+
+  if (state === STATE.CHARGING) {
+    ctx.fillStyle = '#dfe6ee';
+    ctx.font = '13px Segoe UI';
+    ctx.textAlign = 'center';
+    ctx.fillText('Charging...', boatX, boatY - 60);
+  }
+}
+
+function tick(now) {
+  if (state === STATE.CHARGING) {
+    markerPos = triangleWave(now - chargeStart, 1300) * 100;
+    meterMarker.style.left = markerPos + '%';
+  } else if (state === STATE.REELING) {
+    updateReel(now);
+  }
+  drawScene(now);
+  requestAnimationFrame(tick);
+}
+requestAnimationFrame(tick);
+newSweetZone();
+</script>
+
+</body>
+</html>

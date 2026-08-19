@@ -1,0 +1,253 @@
+PROJECT: DEEP REEL
+A 2D fishing RPG / horror / incremental, built to feel like a browser Flash game.
+
+============================================================
+1. OVERVIEW
+============================================================
+
+Concept
+You're alone on a small boat, fishing a stretch of water that starts out mundane
+(tin cans, common fish) and gets stranger the deeper, later, or luckier you fish.
+Progression is entirely through what you catch: sell it for money, spend money on
+better gear, better gear lets you reach places that hide the story.
+
+Platform
+Single HTML page. Canvas + JavaScript. No backend, no install — open the file (or
+host it) and play. This matches the format that already worked well for you in
+Lemmings/Arcade_Legends/bounce (1,500-1,900 lines, one file, "Flash game" feel).
+If the file gets big (roughly 2,000+ lines), split into index.html / game.js /
+data.js — same pattern as your JewelCraft project.
+
+Scope for v1 (what "done" looks like before you touch story/horror content)
+Cast, hook, reel, catch, sell, upgrade, repeat — fun on its own, no story yet.
+Everything else in this doc is what gets layered on top once that loop works.
+
+============================================================
+2. CORE LOOP
+============================================================
+
+Dock (safe zone) -> Cast -> Wait for bite -> Reel-in (tension minigame) ->
+Catch resolved (fish/junk/item, with a rolled size) -> back to Dock to sell/buy,
+or cast again from the boat. Every catch is one small "was that worth it?"
+decision loop — classic incremental-game bait.
+
+============================================================
+3. CASTING MECHANIC
+============================================================
+
+Power: hold a key/click to charge a power meter, release to cast. A moving
+power bar (like a golf-swing meter) keeps it skill-based, not just "hold longer
+= better."
+
+Accuracy: a target zone slides across the meter; landing the release inside it
+= a clean cast. Clean casts bias the catch roll toward better zones/rarer table
+entries. A botched cast still works, just fishes a worse table (more junk).
+
+Distance -> Zone: cast power determines which water zone you're fishing:
+  - Shallows (weak cast) - safest, junk + common fish only
+  - Mid-water (medium cast) - common + uncommon fish
+  - Deep water (strong/clean cast) - rare fish, first "wrong" fish start showing
+  - The Trench (requires upgraded rod/line to even reach) - story items, horror
+
+============================================================
+4. CATCH / REEL-IN SYSTEM
+============================================================
+
+1. After casting, a random delay before a "bite" (shorter delay = better cast
+   zone/accuracy, so a clean cast also means less waiting).
+2. Reel-in: a tension bar you manage (reel = tension rises, fish pulls = tension
+   falls) — keep it in a safe band; empty tension = fish escapes, max tension =
+   line snaps. This is the one moment of real-time skill per catch.
+3. On a successful land, roll the catch from a weighted table. Roll weights are
+   influenced by:
+     - Water zone (from cast distance)
+     - Player level
+     - Bait quality (cheap bait = mostly junk; premium bait weights toward
+       rare/story entries)
+     - Story flags (certain items only become rollable after a trigger fires)
+     - A little pure luck, so it never feels solved
+
+Each catch also rolls a size (e.g. a length in a min-max range per species). Big
+outliers are what feed the Log/Almanac and give bonus sell value.
+
+============================================================
+5. FISH & ITEMS
+============================================================
+
+Tiers (rough shape — tune exact odds once the loop is running):
+  - Junk: tin cans, old boots, seaweed, bottles - sells for little, but some
+    junk items are secretly story flags in disguise (a boot with a note in it).
+  - Common fish: bread-and-butter income.
+  - Uncommon/Rare fish: bigger payouts, drive the "one more cast" feeling.
+  - Wrong fish: fish that aren't quite right — extra eyes, wrong number of
+    fins, too warm to the touch. First appear in Deep Water. These are the
+    horror layer's entry point and shouldn't be explained, just noticed.
+  - Story/relic items: journal pages, keys, old photographs, things that
+    clearly don't belong at the bottom of this water. These drive the Log and
+    unlock horror-layer content.
+
+Every species/item is data (name, tiers, size range, sell value, table
+weight, zone availability, sprite id) — keep it in one data table/JSON object,
+not hardcoded in logic, so you can hand me "add a new fish" as a data edit, not
+a code change.
+
+============================================================
+6. ECONOMY & UPGRADES
+============================================================
+
+Sell all catches at the Dock. Spend on:
+  - Rod (unlocks stronger casts / reaches farther zones)
+  - Line (raises max tension before snapping, or reduces snap risk)
+  - Bait (changes catch table weighting — this is the main "pay for better
+    luck" upgrade)
+  - Boat upgrades (unlocks The Trench, maybe lets you stay out at night)
+  - Lantern/sonar (stretch: lets you "see" what's about to bite before you
+    commit to reeling it in — good horror-pacing tool, since it can show you
+    something wrong is down there before you decide to reel)
+
+============================================================
+7. PROGRESSION (RPG LAYER)
+============================================================
+
+XP per catch (bigger/rarer = more XP) -> Level. Level gates:
+  - Which zones are reachable regardless of cast power
+  - Catch-table weighting (higher level = better average rolls, small and
+    gradual, not a hard gate)
+  - Maybe a couple of passive perks at milestone levels (e.g. "tension bar
+    drains slower")
+
+Keep this layer light. It should feel like it's making a loop you already
+enjoy slightly better, not become its own system to manage.
+
+============================================================
+8. HORROR / STORY LAYER
+============================================================
+
+No cutscenes — story is delivered through what you catch and short log/journal
+text, which fits a solo single-file project much better than scripted scenes.
+
+- A hidden "Dread" counter rises from wrong-fish catches and specific triggers,
+  and can gate content (e.g. past a threshold, night fishing changes what's in
+  the Deep/Trench tables, or ambient text/UI starts subtly changing).
+- Story items unlock journal entries in the Log — the player pieces the plot
+  together themselves by reading what they've found, in whatever order they
+  fished it up.
+- Consider a "shouldn't have reeled that in" option: some bites can be let go
+  once you see what's on the line (if you build the lantern/sonar peek), for
+  players who want to opt out of engaging with the horror content directly.
+
+This layer is entirely built from Log entries + catch-table gating — no new
+engine systems required, which keeps it buildable by data edits once the core
+loop and Log exist.
+
+============================================================
+9. INCREMENTAL LAYER (stretch goal, build last)
+============================================================
+
+- Idle rod: once unlocked, auto-fishes at reduced efficiency while you're at
+  the Dock managing inventory/shop.
+- Offline progress: on load, grant a capped amount of "while you were away"
+  catches based on elapsed time.
+- Optional prestige: a "new boat" reset that trades your current progress for
+  a permanent small bonus — classic incremental hook, but only worth adding if
+  the core loop is proven fun first.
+
+============================================================
+10. LOG / ALMANAC
+============================================================
+
+Per species/item: first caught (date), times caught, best size on record.
+Doubles as your save-data backbone — the Log is basically your save file
+rendered as a UI. Story items get their own section with unlocked journal
+text.
+
+============================================================
+11. ART / ASSETS
+============================================================
+
+Simple flat 2D sprites — fits your sloyd.ai pipeline well since nothing here
+needs animation rigs, just still icons plus maybe 2-3 frame sequences (idle
+bob on water, splash on catch, reel motion). Sprite list to generate once the
+data table is locked in:
+  - Boat (idle + maybe a slight rock animation)
+  - Water (tileable, 1-2 zone color variants: shallow/mid/deep/trench)
+  - Rod/line/lure icons (per upgrade tier)
+  - Fish icons — one per species, sized consistently
+  - Junk/item icons — tin can, boot, journal page, key, etc.
+  - UI: tension bar, power meter, dock/shop backdrop
+
+Keep everything on a consistent canvas size/style from the start — mixing
+sprite resolutions later is a pain to fix.
+
+============================================================
+12. DATA / SAVE STRUCTURE
+============================================================
+
+Single localStorage JSON blob:
+  - player: level, xp, money, equipped rod/line/bait tier, dread counter
+  - log: per-species {caught count, best size, first caught}
+  - storyFlags: which story items/triggers have fired
+  - inventory: unsold catches waiting at dock (if you don't auto-sell)
+
+Species/item definitions live in a separate in-code data table (not the save),
+so you can add content without touching game logic.
+
+============================================================
+13. ROADMAP (build in this order — each step should be playable before
+    moving to the next)
+============================================================
+
+Step 1: Core cast + instant catch (no minigame yet)
+  Boat on water (rectangles are fine), power+accuracy cast meter, instant
+  catch roll from one flat table, result logged to console/simple text.
+  Goal: does casting feel good to press, on its own?
+
+Step 2: Reel-in tension minigame
+  Add the bite delay + tension bar. Fish can now escape or snap the line.
+  Still placeholder art.
+
+Step 3: Zones + real catch tables
+  Cast power determines zone; each zone has its own weighted table (junk/
+  common/uncommon/rare). Add size rolls.
+
+Step 4: Dock economy
+  Sell screen, currency, buy rod/line/bait tiers that measurably change
+  casting/reeling/catch odds. Add level/XP.
+
+Step 5: Log / Almanac + save
+  Persist everything to localStorage. Build the Log UI (this becomes your
+  primary "is this game becoming a real thing" milestone).
+
+Step 6: Horror layer
+  Add wrong-fish table entries, dread counter, story items, and gate them by
+  zone/level/night. No new engine code — this should be almost entirely data
+  + Log-entry additions on top of Step 5.
+
+Step 7: Story delivery
+  Journal/log text unlocked by story items; wire up any dread-based changes to
+  ambient text/UI.
+
+Step 8: Incremental layer (stretch)
+  Idle rod, offline progress, optional prestige reset.
+
+Step 9: Art pass
+  Swap placeholder rectangles for sloyd.ai sprites using the list in section
+  11. Add juice: splash particles, screen shake on big catches, sound.
+
+Step 10: Playtest + bug pass
+  Play it start to finish, keep a TODO.txt of real bugs/annoyances as you find
+  them (this worked well for you on Revenge) and clear it before calling v1
+  done.
+
+============================================================
+14. NOTES
+============================================================
+
+- Commit to git after each completed step (this project's already in your
+  GitHub repo, so there's no excuse not to) — that gives you a real rollback
+  point if a step goes sideways, instead of duplicating files by hand.
+- Resist adding story/horror/incremental content before Step 5 is genuinely
+  fun. The core loop is what carries the whole game; everything else is
+  seasoning.
+- All fish/item stats, sell values, and table weights belong in one data
+  table — tune numbers there, not scattered through game logic.
